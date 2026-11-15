@@ -56,40 +56,17 @@ def _extract_final_answer(reasoning_content: str) -> str:
     """Extract the final user-facing answer from reasoning_content.
 
     NVIDIA Nemotron puts its internal thinking process in reasoning_content.
-    The final answer typically follows a delimiter like "Here's the response:"
-    or appears after the thinking sections. We strip the thinking and return
-    only the answer portion.
+    The final answer typically appears after all thinking sections. We take
+    the last substantial block of text as the answer.
     """
     if not reasoning_content:
         return ""
 
-    # Common delimiters that separate thinking from the final answer
-    delimiters = [
-        "Here's the final response:",
-        "Final answer:",
-        "Here's my response:",
-        "Here's the response:",
-        "Final response:",
-        "Answer:",
-        "Here's the answer:",
-    ]
-
-    for delim in delimiters:
-        idx = reasoning_content.rfind(delim)
-        if idx != -1:
-            candidate = reasoning_content[idx + len(delim):].strip()
-            if len(candidate) > 10:
-                return candidate
-
-    # Fallback: look for the last substantial block that doesn't look like thinking
     blocks = [b.strip() for b in reasoning_content.split("\n\n") if b.strip()]
+
+    # Return the last block that's substantial enough to be an answer
     for block in reversed(blocks):
-        # Skip blocks that look like thinking steps (numbered, start with "Analyze", etc.)
-        if re.match(r"^\d+\.\s", block):
-            continue
-        if block.startswith(("Here's a thinking", "Let's draft", "Important:", "But I need", "No asterisks", "No Markdown", "Blank line")):
-            continue
-        if len(block) > 30:
+        if len(block) > 40:
             return block
 
     return ""
