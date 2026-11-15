@@ -17,7 +17,9 @@ from __future__ import annotations
 import json
 import os
 import re
+from collections import OrderedDict
 from datetime import datetime, timezone
+from threading import Lock
 
 from fastapi import FastAPI, Header, HTTPException, Request, Response
 import httpx
@@ -42,8 +44,24 @@ WEBHOOK_SECRET = os.environ.get("WEBHOOK_SECRET", "")
 STAFF_GROUP_CHAT_ID = os.environ.get("STAFF_GROUP_CHAT_ID", "")
 NVIDIA_API_KEY = os.environ.get("NVIDIA_API_KEY", "")
 PORT = int(os.environ.get("PORT", "8000"))
+PUBLIC_BASE_URL = os.environ.get("RENDER_EXTERNAL_URL", "").rstrip("/") or "https://sdu-helpdesk-bot-fresh.onrender.com"
 
 TELEGRAM_API = "https://api.telegram.org/bot{token}/{method}"
+
+_SEEN_UPDATE_IDS: "OrderedDict[int, bool]" = OrderedDict()
+_SEEN_MESSAGE_KEYS: "OrderedDict[str, bool]" = OrderedDict()
+_SEEN_LOCK = Lock()
+_MAX_SEEN = 5000
+
+
+def _mark_seen(store: "OrderedDict", key, max_size: int = _MAX_SEEN) -> bool:
+    with _SEEN_LOCK:
+        if key in store:
+            return True
+        store[key] = True
+        while len(store) > max_size:
+            store.popitem(last=False)
+    return False
 
 
 # ---------------------------------------------------------------------------
@@ -103,6 +121,24 @@ def _startup():
             )
         except Exception:
             pass
+
+        # Ensure webhook is configured with secret token when available
+        try:
+            webhook_url = f"{PUBLIC_BASE_URL}/webhook"
+            payload = {
+                "url": webhook_url,
+                "allowed_updates": ["message"],
+                "drop_pending_updates": False,
+            }
+            if WEBHOOK_SECRET:
+                payload["secret_token"] = WEBHOOK_SECRET
+            httpx.post(
+                TELEGRAM_API.format(token=BOT_TOKEN, method="setWebhook"),
+                json=payload,
+                timeout=20,
+            )
+        except Exception as exc:
+            print(f"STARTUP WARNING: Failed to set webhook: {exc}")
 
 
 # ---------------------------------------------------------------------------
@@ -338,12 +374,20 @@ async def webhook(request: Request, x_telegram_bot_api_secret_token: str | None 
     except Exception:
         return Response(status_code=200)
 
-    message = data.get("message") or data.get("edited_message")
+    update_id = data.get("update_id")
+    if isinstance(update_id, int) and _mark_seen(_SEEN_UPDATE_IDS, update_id):
+        return Response(status_code=200)
+
+    message = data.get("message")
     if not message:
         return Response(status_code=200)
 
     chat = message.get("chat", {})
-    chat_id = str(chat.get("id"))
+    chat_id = str(chat.get("id", ""))
+    message_id = message.get("message_id")
+    if chat_id and message_id is not None:
+        if _mark_seen(_SEEN_MESSAGE_KEYS, f"{chat_id}:{message_id}"):
+            return Response(status_code=200)
     sender = " ".join(filter(None, [chat.get("first_name", ""), chat.get("last_name", "")])).strip() or "Unknown"
     text = message.get("text", "")
     if not text:
