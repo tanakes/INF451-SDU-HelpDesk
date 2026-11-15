@@ -1,0 +1,84 @@
+{
+  "description": "US-04 (Document & Guide Dispatch) manifest. Maps each dispatchable resource to either a direct HTTPS link (when the official source is a dynamic/JS-rendered page or no static file exists) or a locally stored file (when a real official PDF exists and is authorized for public distribution). The bot must pick the dispatch mode as recorded here — do not invent file attachments for 'link' entries, and do not paraphrase a URL for 'file' entries when the actual file is available. All link entries double as source citations: when the bot answers from a knowledge_base/*.md file that has a matching entry here, it should mention this URL as the source.",
+  "last_updated": "2026-10-03",
+  "resources": [
+    {
+      "id": "academic_calendar",
+      "title": "Academic Calendar 2026-2027",
+      "category": "registration",
+      "dispatch_mode": "link",
+      "url": "https://sdu.edu.kz/en/academic-calendar/",
+      "reason": "The official calendar is rendered as an interactive page (per-year, per-role tabs), not a static downloadable PDF. A summarized Markdown version is grounded in knowledge_base/registration/academic_calendar.md for direct Q&A, citing this URL as the source; for the full calendar the bot dispatches this link."
+    },
+    {
+      "id": "tuition_fees_overview",
+      "title": "Tuition Fees Overview & Rules",
+      "category": "tuition",
+      "dispatch_mode": "link",
+      "url": "https://sdu.edu.kz/en/tuition-fees/",
+      "reason": "Per-program fee tables (Bachelor/Master/PhD, per cohort year) are published as JS-rendered downloadable documents on this page and could not be captured as static files during this implementation. The bot dispatches the page link (and cites it as the source for knowledge_base/tuition/tuition_fees.md) so students reach the current, correct per-program figures."
+    },
+    {
+      "id": "tuition_fees_regulation_pdf",
+      "title": "Regulation on Tuition Fees at SDU University (official PDF, ДП-SDU-22)",
+      "category": "tuition",
+      "dispatch_mode": "file",
+      "file": "knowledge_base/academic_regulations/tuition_fees_regulation.pdf",
+      "reason": "Official PDF of the tuition fee regulation (sourced from uploads/rules-and-regulations.zip), authorized for public use per knowledge_base/academic_regulations/manifest.json. Covers discounts, SDU grants, and installment-adjacent policy not found on the public tuition-fees page. See knowledge_base/academic_regulations/tuition_fees_regulation.md for the grounded summary."
+    },
+    {
+      "id": "dormitory_boys_house",
+      "title": "Boys' Dormitory — Student House Information",
+      "category": "dormitory",
+      "dispatch_mode": "link",
+      "url": "https://sdu.edu.kz/en/accomodation/boys-house/",
+      "reason": "The official page content (facilities, contacts, required documents) is already summarized in knowledge_base/dormitory/boys_dormitory.md for direct Q&A, citing this URL as the source. No standalone PDF application form is published publicly; dispatch the page link for photos/full details."
+    },
+    {
+      "id": "dormitory_girls_house",
+      "title": "Girls' Dormitory — Student House Information",
+      "category": "dormitory",
+      "dispatch_mode": "link",
+      "url": "https://sdu.edu.kz/en/accomodation/girls-house/",
+      "reason": "The official page content (facilities, contacts, required documents) is already summarized in knowledge_base/dormitory/girls_dormitory.md for direct Q&A, citing this URL as the source. No standalone PDF application form is published publicly; dispatch the page link for photos/full details."
+    },
+    {
+      "id": "student_service_center_services",
+      "title": "Student Service Center — Services (transcripts, verifications, change of major)",
+      "category": "transcripts",
+      "dispatch_mode": "link",
+      "url": "https://sdu.edu.kz/en/student-service-center/services/",
+      "reason": "No downloadable petition/request-form PDFs are published publicly for these services; students must submit requests in person at the SSC in Block B. The bot dispatches the page link (citing it as the source for knowledge_base/transcripts/student_service_center.md) and/or answers directly from that file."
+    },
+    {
+      "id": "petition_forms",
+      "title": "Petition / Request Forms (change of major, transcript request, etc.)",
+      "category": "transcripts",
+      "dispatch_mode": "unavailable",
+      "reason": "No official downloadable PDF petition forms are published on the public SDU website. US-04's goal of providing 'official PDF guides (petition forms)' cannot be fulfilled for this resource without either (a) the project team sourcing the actual form files, or (b) portal-authenticated access out of scope for Sprint 2. The bot must state this is not available and refer students to the SSC in Block B, per SOUL.md's safe-failure rule."
+    },
+    {
+      "id": "campus_wifi_info",
+      "category": "campus_services",
+      "title": "SDU Campus Student Services & Wi-Fi Access",
+      "dispatch_mode": "link",
+      "url": "https://sdu.edu.kz/en/student-services/",
+      "reason": "Official SDU student services page explaining campus facilities and network connectivity. The bot cites this URL as source and answers Wi-Fi questions directly from knowledge_base/campus_services/campus_wifi.md."
+    },
+    {
+      "id": "campus_map_image",
+      "category": "campus_services",
+      "title": "SDU Campus Layout Map",
+      "dispatch_mode": "file",
+      "file": "documents/assets/SDU_map.jpg",
+      "reason": "Visual map of the SDU campus layout (Blocks A through H). Note that the new Block I is a recent addition. Dispatched directly as an image when students ask for map or room navigation. Source: SDU Campus Layout Map & Student Community Guide."
+    },
+    {
+      "id": "academic_regulations_all",
+      "title": "Official SDU Regulations & Policies (32 documents)",
+      "category": "academic_regulations",
+      "dispatch_mode": "file",
+      "note": "This is a folder-level entry, not a single file. All 32 individual PDFs in knowledge_base/academic_regulations/ are authorized for direct dispatch (see knowledge_base/academic_regulations/manifest.json for the full per-file list with matching .md summaries). Dispatch the exact PDF matching the student's request, e.g. academic_integrity_policy.pdf, admissions_policy.pdf, turnitin_policy.pdf, etc. Cite the regulation code/title (e.g. 'Source: Academic Integrity Policy, DP-SDU-28') rather than a URL, since these are internal regulation documents, not public web pages."
+    }
+  ]
+}

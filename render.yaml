@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: sdu-helpdesk-bot
+    env: python
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "uvicorn main:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: sdu-helpdesk-db
+          property: connectionString
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: BOT_TOKEN
+        sync: false
+      - key: WEBHOOK_SECRET
+        sync: false
+      - key: STAFF_GROUP_CHAT_ID
+        sync: false
+databases:
+  - name: sdu-helpdesk-db
+    plan: free
+    region: frankfurt

@@ -1,0 +1,237 @@
+{
+  "category": "academic_regulations",
+  "display_name": "Rules and Regulations",
+  "status": "AUTHORIZED",
+  "authorization_required_from": "University Administration / Academic Advisor (Authorizing Stakeholder) — AUTHORIZATION RECEIVED",
+  "governance_note": "These documents were provided by the project team (uploads/rules-and-regulations.zip) as official SDU University policy PDFs. Per US-03 constraint (A17), restricted/official regulation documents required stakeholder authorization before public dispatch. AUTHORIZATION HAS BEEN CONFIRMED by the project owner (recorded generically below; see README.md for a note recommending this be formalized with a named approver and date for audit purposes). All 32 documents in this folder are now authorized for public use by the bot, for both grounded Q&A (US-03) and direct dispatch (US-04).",
+  "last_updated": "2026-10-01",
+  "source": "Uploaded by project team: uploads/rules-and-regulations.zip (original filenames preserved where already descriptive; opaque hash filenames renamed to descriptive names based on extracted document titles)",
+  "documents": [
+    {
+      "file": "academic_integrity_policy.pdf",
+      "title": "Academic Integrity Policy of SDU University",
+      "language": "en",
+      "authorized": true,
+      "md_summary": "academic_integrity_policy.md"
+    },
+    {
+      "file": "academic_leave_regulation.pdf",
+      "title": "Academic Leave Regulation",
+      "language": "en",
+      "authorized": true,
+      "md_summary": "academic_leave_regulation.md"
+    },
+    {
+      "file": "academic_mobility.pdf",
+      "title": "Academic Mobility Regulation",
+      "language": "en",
+      "authorized": true,
+      "md_summary": "academic_mobility.md"
+    },
+    {
+      "file": "academic_performance_monitoring_policy.pdf",
+      "title": "Policy for Conducting Types of Monitoring of Academic Performance",
+      "language": "en",
+      "authorized": true,
+      "md_summary": "academic_performance_monitoring_policy.md"
+    },
+    {
+      "file": "admissions_policy.pdf",
+      "title": "Admissions Policy of SDU University",
+      "language": "en",
+      "authorized": true,
+      "md_summary": "admissions_policy.md"
+    },
+    {
+      "file": "ai_startup_project_final_attestation_regulation.pdf",
+      "title": "Regulation on the Procedure for Using an AI-Startup-Project as a Form of Final Attestation",
+      "language": "en",
+      "authorized": true,
+      "md_summary": "ai_startup_project_final_attestation_regulation.md"
+    },
+    {
+      "file": "ai_tools_use_in_academic_activities_regulation.pdf",
+      "title": "Regulations on the Use of Artificial Intelligence Tools in Academic Activities",
+      "language": "en",
+      "authorized": true,
+      "md_summary": "ai_tools_use_in_academic_activities_regulation.md"
+    },
+    {
+      "file": "assessment_policy.pdf",
+      "title": "SDU University Assessment Policy",
+      "language": "en",
+      "authorized": true,
+      "md_summary": "assessment_policy.md"
+    },
+    {
+      "file": "master_graduate_competency_model_regulation_ru.pdf",
+      "title": "Положение о компетентностной модели выпускника программы бакалавриата (Regulation on the Competency Model of a Bachelor's Program Graduate)",
+      "language": "ru",
+      "authorized": true,
+      "md_summary": "master_graduate_competency_model_regulation_ru.md"
+    },
+    {
+      "file": "bachelor_graduate_competency_model_regulation_ru.pdf",
+      "title": "Положение о компетентностной модели выпускника программы бакалавриата — редакция 2 (Regulation on the Competency Model of a Bachelor's Program Graduate, revision 2)",
+      "language": "ru",
+      "authorized": true,
+      "md_summary": "bachelor_graduate_competency_model_regulation_ru.md"
+    },
+    {
+      "file": "doctoral_research_practice_rules_law_program_v1_ru.pdf",
+      "title": "Правила осуществления научно-исследовательской работы докторантов по ОП 8D04201 — Прикладное право (RU_ED_2026_29)",
+      "language": "ru",
+      "authorized": true,
+      "md_summary": "doctoral_research_practice_rules_law_program_v1_ru.md"
+    },
+    {
+      "file": "doctoral_research_practice_rules_law_program_v2_ru.pdf",
+      "title": "Правила осуществления научно-исследовательской работы докторантов по ОП 8D04201 — Прикладное право (RU_ED_2026_39)",
+      "language": "ru",
+      "authorized": true,
+      "md_summary": "doctoral_research_practice_rules_law_program_v2_ru.md"
+    },
+    {
+      "file": "educational_process_organization_regulation.pdf",
+      "title": "Regulation on the Organization of the Educational Process",
+      "language": "en",
+      "authorized": true,
+      "md_summary": "educational_process_organization_regulation.md"
+    },
+    {
+      "file": "final_assessment_regulations_ssbl_school.pdf",
+      "title": "Final Assessment Regulations of the School of Social Sciences, Business and Law",
+      "language": "en",
+      "authorized": true,
+      "md_summary": "final_assessment_regulations_ssbl_school.md"
+    },
+    {
+      "file": "lms_moodle_usage_policy.pdf",
+      "title": "LMS Moodle Usage Policy at Suleyman Demirel University",
+      "language": "en",
+      "authorized": true,
+      "md_summary": "lms_moodle_usage_policy.md"
+    },
+    {
+      "file": "master_research_practice_organization_guidelines_kz.pdf",
+      "title": "Магистратурада зерттеу практикасын ұйымдастыру, өткізу нұсқаулығы (Guidelines for Organizing and Conducting Research Practice in Master's Studies)",
+      "language": "kz",
+      "authorized": true,
+      "md_summary": "master_research_practice_organization_guidelines_kz.md"
+    },
+    {
+      "file": "migration_policy_regulation_ru.pdf",
+      "title": "Положение миграционной политики университета имени Сулеймана Демиреля (Migration Policy Regulation)",
+      "language": "ru",
+      "authorized": true,
+      "md_summary": "migration_policy_regulation_ru.md"
+    },
+    {
+      "file": "non_formal_education_regulation.pdf",
+      "title": "Regulations on Non-Formal Education",
+      "language": "en",
+      "authorized": true,
+      "md_summary": "non_formal_education_regulation.md"
+    },
+    {
+      "file": "occupational_health_and_safety_regulation.pdf",
+      "title": "Permanent Technological Regulation on Occupational Health and Safety",
+      "language": "en",
+      "authorized": true,
+      "md_summary": "occupational_health_and_safety_regulation.md"
+    },
+    {
+      "file": "dual_education_organization_policy.pdf",
+      "title": "Policy on Approval of the Rules for Organizing Dual Education (ДП-SDU-118)",
+      "language": "en",
+      "authorized": true,
+      "md_summary": "dual_education_organization_policy_DP-SDU-118.md"
+    },
+    {
+      "file": "office_hours_guidelines.pdf",
+      "title": "Office Hours - Guidelines for Students",
+      "language": "en",
+      "authorized": true,
+      "md_summary": "office_hours_guidelines.md"
+    },
+    {
+      "file": "offline_examination_rules.pdf",
+      "title": "Offline Examination Rules for Students",
+      "language": "en",
+      "authorized": true,
+      "md_summary": "offline_examination_rules.md"
+    },
+    {
+      "file": "online_examination_rules.pdf",
+      "title": "Online Examination Rules for Students",
+      "language": "en",
+      "authorized": true,
+      "md_summary": "online_examination_rules.md"
+    },
+    {
+      "file": "pedagogical_retraining_program_regulation_ru.pdf",
+      "title": "Правила организации программы педагогической переподготовки (Rules for Organizing the Pedagogical Retraining Program, АП-SDU-115)",
+      "language": "ru",
+      "authorized": true,
+      "md_summary": "pedagogical_retraining_program_regulation_ru.md"
+    },
+    {
+      "file": "phd_doctoral_studies_regulation.pdf",
+      "title": "PhD Doctoral Studies Regulation",
+      "language": "en",
+      "authorized": true,
+      "md_summary": "phd_doctoral_studies_regulation.md"
+    },
+    {
+      "file": "reasonable_adjustment_disability_policy.pdf",
+      "title": "Reasonable Adjustment for Students with Disability and Special Needs (АП-SDU-122)",
+      "language": "en",
+      "authorized": true,
+      "md_summary": "reasonable_adjustment_disability_policy.md"
+    },
+    {
+      "file": "scholarship_and_grant_programs_regulation.pdf",
+      "title": "Regulation on Scholarship and Grant Programs for Students",
+      "language": "en",
+      "authorized": true,
+      "md_summary": "scholarship_and_grant_programs_regulation.md"
+    },
+    {
+      "file": "state_education_grant_vacancies_regulation_ru.pdf",
+      "title": "Положение о вакантных местах государственного образовательного гранта (Regulation on Vacant State Education Grant Places, АП-SDU-62)",
+      "language": "ru",
+      "authorized": true,
+      "md_summary": "state_education_grant_vacancies_regulation_ru.md"
+    },
+    {
+      "file": "transfer_and_readmission_policy.pdf",
+      "title": "Policy on the Transfer and Readmission of Students (ДП-SDU-33)",
+      "language": "en",
+      "authorized": true,
+      "md_summary": "transfer_and_readmission_policy.md"
+    },
+    {
+      "file": "transfer_and_reinstatement_memo.pdf",
+      "title": "Memo to the Policy of Transfer and Reinstatement of Students",
+      "language": "en",
+      "authorized": true,
+      "md_summary": "transfer_and_reinstatement_memo.md"
+    },
+    {
+      "file": "tuition_fees_regulation.pdf",
+      "title": "Regulation on Tuition Fees at SDU University",
+      "language": "en",
+      "authorized": true,
+      "md_summary": "tuition_fees_regulation.md"
+    },
+    {
+      "file": "turnitin_policy.pdf",
+      "title": "Turnitin Policy",
+      "language": "en",
+      "authorized": true,
+      "md_summary": "turnitin_policy.md"
+    }
+  ],
+  "authorized_by": "Project team (generic record — recommend formalizing with named Authorizing Stakeholder)",
+  "authorized_on": "2026-10-01"
+}
