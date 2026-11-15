@@ -3,7 +3,7 @@
 Endpoints:
   GET  /          health check
   GET  /debug     check env var status
-  GET  /test-send test _send_message to chat 987654321
+  GET  /test-send test _send_message
   POST /webhook   Telegram webhook entry point
 
 Env vars:
@@ -20,6 +20,7 @@ import httpx
 
 from llm import answer
 from knowledge_base import find_relevant_docs
+from db import init_schema, log_query, create_ticket, get_profile, save_profile
 
 app = FastAPI(title="SDU Help Desk Bot")
 
@@ -33,6 +34,7 @@ TELEGRAM_API = "https://api.telegram.org/bot{token}/{method}"
 
 @app.on_event("startup")
 def _startup():
+    init_schema()
     missing = []
     if not BOT_TOKEN:
         missing.append("BOT_TOKEN")
@@ -42,6 +44,24 @@ def _startup():
         print(f"STARTUP WARNING: Missing env vars: {', '.join(missing)}")
     else:
         print("STARTUP: All required env vars are set")
+
+    # Set Telegram bot commands
+    if BOT_TOKEN:
+        try:
+            cmds = [
+                {"command": "start", "description": "Start the bot and show welcome menu"},
+                {"command": "menu", "description": "Show topic menu"},
+                {"command": "profile", "description": "View or set your academic profile"},
+                {"command": "advisor", "description": "Escalate to a human advisor"},
+                {"command": "help", "description": "Show help information"},
+            ]
+            httpx.post(
+                TELEGRAM_API.format(token=BOT_TOKEN, method="setMyCommands"),
+                json={"commands": cmds},
+                timeout=15,
+            )
+        except Exception:
+            pass
 
 
 @app.get("/")
@@ -97,6 +117,16 @@ def _send_message(chat_id: str, text: str) -> dict:
         return {"success": False, "error": str(exc)}
 
 
+def _save_session(session_id: str, sender: str, channel: str, text: str, reply: str):
+    """Save session transcript to file-based database."""
+    from db import save_session, append_session_transcript
+    try:
+        save_session(session_id, sender, channel)
+        append_session_transcript(session_id, text, reply)
+    except Exception:
+        pass  # don't break the webhook on session save failure
+
+
 @app.post("/webhook")
 async def webhook(request: Request, x_telegram_bot_api_secret_token: str | None = Header(default=None)):
     if WEBHOOK_SECRET and x_telegram_bot_api_secret_token != WEBHOOK_SECRET:
@@ -123,8 +153,8 @@ async def webhook(request: Request, x_telegram_bot_api_secret_token: str | None 
     lower = text.strip().lower()
 
     try:
-        # Greetings / menu
-        if lower in ("hi", "hello", "start", "menu", "help"):
+        # /start command - new session
+        if lower == "/start":
             reply = (
                 "🎓 Welcome to the SDU University Help Desk!\n\n"
                 "Choose a topic:\n\n"
@@ -134,9 +164,72 @@ async def webhook(request: Request, x_telegram_bot_api_secret_token: str | None 
                 "4. Transcripts\n\n"
                 "Or just ask your question in Kazakh, Russian, or English."
             )
-            result = _send_message(chat_id, reply)
-            if not result["success"]:
-                print(f"SEND_FAILED: {result['error']}")
+            _send_message(chat_id, reply)
+            _save_session(session_id, sender, "Telegram", "/start", reply)
+            log_query(now, "System", "English", "answered", "User started bot with /start")
+            return Response(status_code=200)
+
+        # /menu command
+        if lower == "/menu":
+            reply = (
+                "📋 SDU Help Desk Menu:\n\n"
+                "1. Tuition Fees\n"
+                "2. Course Add/Drop\n"
+                "3. Dormitory\n"
+                "4. Transcripts\n\n"
+                "Ask your question in Kazakh, Russian, or English."
+            )
+            _send_message(chat_id, reply)
+            _save_session(session_id, sender, "Telegram", "/menu", reply)
+            return Response(status_code=200)
+
+        # /help command
+        if lower == "/help":
+            reply = (
+                "🆘 SDU Help Desk Bot Commands:\n\n"
+                "/start - Start the bot and show welcome menu\n"
+                "/menu - Show topic menu\n"
+                "/profile - View or set your academic profile\n"
+                "/advisor - Escalate to a human advisor\n"
+                "/help - Show this help\n\n"
+                "Or just ask your question in Kazakh, Russian, or English."
+            )
+            _send_message(chat_id, reply)
+            _save_session(session_id, sender, "Telegram", "/help", reply)
+            return Response(status_code=200)
+
+        # /profile command
+        if lower == "/profile":
+            prof = get_profile(chat_id)
+            if prof:
+                reply = (
+                    f"🎓 Your academic profile:\n\n"
+                    f"Degree: {prof.get('degree', 'N/A')}\n"
+                    f"Major: {prof.get('major', 'N/A')}\n"
+                    f"Year: {prof.get('year', 'N/A')}\n"
+                    f"Updated: {prof.get('updated_at_utc', 'N/A')}\n\n"
+                    f"To update, send: 'I am a [degree] [major] student, year [number]'"
+                )
+            else:
+                reply = (
+                    "No academic profile set yet.\n\n"
+                    "Tell me your degree, major, and year (e.g. 'I am a 2nd year Bachelor Computer Science student')."
+                )
+            _send_message(chat_id, reply)
+            _save_session(session_id, sender, "Telegram", "/profile", reply)
+            return Response(status_code=200)
+
+        # Profile setting (natural language)
+        if any(kw in lower for kw in ["i am a", "i'm a", "my degree", "student year"]) and any(
+            kw in lower for kw in ["bachelor", "master", "phd", "year", "student"]
+        ):
+            save_profile(chat_id, "Bachelor", None, "General", text[:100], now)
+            reply = (
+                "✅ Profile updated!\n\n"
+                "I've saved your academic information. Use /profile to view it anytime."
+            )
+            _send_message(chat_id, reply)
+            _save_session(session_id, sender, "Telegram", text, reply)
             return Response(status_code=200)
 
         # Staff advisor analytics
@@ -156,17 +249,10 @@ async def webhook(request: Request, x_telegram_bot_api_secret_token: str | None 
             _send_message(chat_id, "📋 Open support tickets:\n\nNone.")
             return Response(status_code=200)
 
-        # Profile management
-        if lower.startswith("profile"):
-            if "reset" in lower:
-                _send_message(chat_id, "✅ Profile cleared. General rules apply now.")
-                return Response(status_code=200)
-            _send_message(chat_id, "No academic profile set yet. Tell me your degree, major, and year (e.g. '2nd year Bachelor Computer Science').")
-            return Response(status_code=200)
-
         # Escalation / ticket
-        if "advisor" in lower or "ticket" in lower or "human" in lower:
+        if "advisor" in lower or "ticket" in lower or "human" in lower or lower == "/advisor":
             ticket_id = f"T-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}-{chat_id[-4:]}"
+            create_ticket(ticket_id, chat_id, sender, text, now, session_id)
             notify = (
                 "New Escalation Ticket:\n\n"
                 f"Student: {sender} (ID: {chat_id})\n"
@@ -177,7 +263,10 @@ async def webhook(request: Request, x_telegram_bot_api_secret_token: str | None 
             )
             if STAFF_GROUP_CHAT_ID:
                 _send_message(STAFF_GROUP_CHAT_ID, notify)
-            _send_message(chat_id, "I have opened a support ticket for your request, and a human advisor will be notified shortly.")
+            reply = "I have opened a support ticket for your request, and a human advisor will be notified shortly."
+            _send_message(chat_id, reply)
+            _save_session(session_id, sender, "Telegram", text, reply)
+            log_query(now, "Other / Not covered", "English", "answered", "Student requested human advisor escalation")
             return Response(status_code=200)
 
         # Normal Q&A path — grounded LLM answer
@@ -186,6 +275,9 @@ async def webhook(request: Request, x_telegram_bot_api_secret_token: str | None 
         result = _send_message(chat_id, reply)
         if not result["success"]:
             print(f"SEND_FAILED: {result['error']}")
+        _save_session(session_id, sender, "Telegram", text, reply)
+        category = kb_docs[0].category if kb_docs else "Other / Not covered"
+        log_query(now, category, "English", "answered" if kb_docs else "not covered", text[:160])
         return Response(status_code=200)
 
     except Exception as exc:

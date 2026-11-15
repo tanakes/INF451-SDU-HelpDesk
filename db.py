@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 import os
 from contextlib import contextmanager
+from datetime import datetime, timezone
 from typing import Optional, List
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
@@ -99,3 +100,27 @@ def create_ticket(ticket_id: str, user_id: str, sender: str, context: str, creat
 def list_open_tickets() -> List[dict]:
     rows = _load("tickets.json")
     return [r for r in rows if r.get("status") == "pending"]
+
+
+def save_session(session_id: str, sender: str, channel: str):
+    rows = _load("sessions.json")
+    rows = [r for r in rows if r.get("session_id") != session_id]
+    rows.append({
+        "session_id": session_id,
+        "sender": sender,
+        "channel": channel,
+        "last_active_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    })
+    _save("sessions.json", rows)
+
+
+def append_session_transcript(session_id: str, user_msg: str, bot_reply: str):
+    transcript_path = _path(f"session_{session_id}.json")
+    rows = _load(f"session_{session_id}.json")
+    ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    rows.append({
+        "timestamp_utc": ts,
+        "user": user_msg,
+        "bot": bot_reply,
+    })
+    _save(f"session_{session_id}.json", rows)

@@ -52,24 +52,98 @@ def build_context(docs) -> str:
     return "\n".join(parts)
 
 
-def _extract_final_answer(reasoning_content: str) -> str:
-    """Extract the final user-facing answer from reasoning_content.
-
-    NVIDIA Nemotron puts its internal thinking process in reasoning_content.
-    The final answer typically appears after all thinking sections. We take
-    the last substantial block of text as the answer.
-    """
-    if not reasoning_content:
+def _strip_thinking(text: str) -> str:
+    """Aggressively remove thinking/analysis patterns from model output."""
+    if not text:
         return ""
 
-    blocks = [b.strip() for b in reasoning_content.split("\n\n") if b.strip()]
+    # Remove thinking markers and blocks
+    patterns_to_remove = [
+        r"Here's a thinking process:.*",
+        r"Here's my thinking process:.*",
+        r"Here's my thought process:.*",
+        r"Let me think through.*",
+        r"Let me reconsider.*",
+        r"Thinking process:.*",
+        r"Analysis:.*",
+        r"Step \d+:.*",
+        r"\d+\.\s*\**Analyze.*",
+        r"\d+\.\s*\**Review.*",
+        r"\d+\.\s*\**Check.*",
+        r"\d+\.\s*\**Examine.*",
+        r"\d+\.\s*\**Determine.*",
+        r"\d+\.\s*\**Draft.*",
+        r"\d+\.\s*\**Structure.*",
+        r"Rule \d+:.*",
+        r"Here's a thinking process.*",
+    ]
 
-    # Return the last block that's substantial enough to be an answer
-    for block in reversed(blocks):
-        if len(block) > 40:
-            return block
+    result = text
+    for pat in patterns_to_remove:
+        result = re.sub(pat, "", result, flags=re.IGNORECASE | re.DOTALL)
 
-    return ""
+    # Remove numbered list items that are clearly thinking steps
+    lines = result.split("\n")
+    cleaned_lines = []
+    skip_next = False
+    for i, line in enumerate(lines):
+        if skip_next:
+            skip_next = False
+            continue
+        stripped = line.strip()
+        # Skip lines that are clearly thinking steps
+        if re.match(r"^\d+\.\s", stripped):
+            if any(kw in stripped.lower() for kw in [
+                "analyze", "review", "check", "examine", "determine",
+                "draft", "structure", "user input", "hard rule", "rule ",
+                "knowledge base", "constraint", "strategy",
+            ]):
+                continue
+        cleaned_lines.append(line)
+
+    result = "\n".join(cleaned_lines)
+
+    # Remove blank line clusters
+    result = re.sub(r"\n{3,}", "\n\n", result)
+
+    # Strip leading/trailing whitespace
+    result = result.strip()
+
+    return result
+
+
+def _looks_like_thinking(text: str) -> bool:
+    """Check if text looks like internal reasoning rather than a final answer."""
+    if not text or len(text) < 10:
+        return True
+
+    thinking_indicators = [
+        "here's a thinking",
+        "let me reconsider",
+        "step 1",
+        "step 2",
+        "step 3",
+        "step 4",
+        "rule 1:",
+        "rule 2:",
+        "rule 3:",
+        "rule 4:",
+        "rule 5:",
+        "rule 6:",
+        "rule 7:",
+        "rule 8:",
+        "analyze user input",
+        "let's draft",
+        "important:",
+        "but i need",
+        "no asterisks",
+        "no markdown",
+        "blank line",
+    ]
+
+    text_lower = text.lower()
+    count = sum(1 for ind in thinking_indicators if ind in text_lower)
+    return count >= 3
 
 
 async def answer(student_message: str, api_key: str, model_name: str = NVIDIA_MODEL) -> str:
@@ -91,7 +165,6 @@ async def answer(student_message: str, api_key: str, model_name: str = NVIDIA_MO
         ],
         "temperature": 0.3,
         "max_tokens": 1000,
-        "reasoning": {"effort": "low"},
     }
 
     try:
@@ -105,9 +178,26 @@ async def answer(student_message: str, api_key: str, model_name: str = NVIDIA_MO
             data = resp.json()
         msg = data["choices"][0]["message"]
         content = msg.get("content") or ""
-        if not content:
-            content = _extract_final_answer(msg.get("reasoning_content") or "")
-        return content or "I could not generate a reply. Please try again."
+        reasoning = msg.get("reasoning_content") or ""
+
+        # Try content first
+        if content and not _looks_like_thinking(content):
+            cleaned = _strip_thinking(content)
+            if cleaned and len(cleaned) > 10:
+                return cleaned
+
+        # Try reasoning_content as fallback
+        if reasoning and not _looks_like_thinking(reasoning):
+            cleaned = _strip_thinking(reasoning)
+            if cleaned and len(cleaned) > 10:
+                return cleaned
+
+        # Last resort: strip thinking from reasoning_content
+        cleaned = _strip_thinking(reasoning)
+        if cleaned and len(cleaned) > 10:
+            return cleaned
+
+        return "I could not generate a reply. Please try again."
     except httpx.HTTPStatusError as exc:
         return f"I'm temporarily unable to answer (API error {exc.response.status_code}). Please contact the SSC in Block B or try again later."
     except Exception as exc:  # pragma: no cover - runtime safety
