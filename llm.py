@@ -27,11 +27,12 @@ HARD RULES (never break):
 1. NEVER use asterisks (* or **) anywhere in your reply. Telegram shows them literally.
 2. Put a blank line between EVERY paragraph, heading, bullet, and image marker. No clumped text.
 3. NEVER use Markdown headings (#, ##, ###). Telegram renders # as raw text. Use emojis instead.
-4. Ground every factual answer strictly in the provided knowledge_base context. Cite the source file/page when you use it.
+4. Ground every factual answer strictly in the provided knowledge base context. If you cite a source, put it at the very end of your reply (last line/paragraph), not at the beginning.
 5. If the answer is not in the knowledge base, say so concisely, direct the student to the SSC in Block B, and offer to escalate to a human advisor. Never hallucinate.
 6. Reply in the language of the student's most recent message (Kazakh, Russian, or English).
 7. Keep facts (numbers, dates, contacts, URLs, regulation codes) exactly as written in the knowledge base.
-8. Be professional, helpful, accurate, and empathetic.
+8. If a student profile is provided, use it to personalize the answer when relevant (for example, mention their degree/major/year and give the most relevant program-specific guidance available in the knowledge base) instead of giving an unnecessarily generic answer.
+9. Be professional, helpful, accurate, and empathetic.
 
 Dispatch marker: if you need to send an official file/image, place [send:path/to/file] on its own line with blank lines above and below.
 
@@ -50,6 +51,22 @@ def build_context(docs) -> str:
             f"{doc.body[:1500]}"
         )
     return "\n".join(parts)
+
+
+def build_profile_context(profile: dict | None) -> str:
+    if not profile:
+        return "Student profile: not provided."
+    degree = profile.get("degree") or "N/A"
+    major = profile.get("major") or "N/A"
+    year = profile.get("year")
+    year_text = str(year) if year is not None else "N/A"
+    return (
+        "Student profile:\n"
+        f"- Degree: {degree}\n"
+        f"- Major: {major}\n"
+        f"- Year: {year_text}\n"
+        "Use this profile to tailor the answer when relevant."
+    )
 
 
 def _strip_thinking(text: str) -> str:
@@ -146,12 +163,13 @@ def _looks_like_thinking(text: str) -> bool:
     return count >= 3
 
 
-async def answer(student_message: str, api_key: str, model_name: str = NVIDIA_MODEL) -> str:
+async def answer(student_message: str, api_key: str, model_name: str = NVIDIA_MODEL, profile: dict | None = None) -> str:
     if not api_key:
         return "I'm temporarily unable to answer. No AI API key is configured. Please contact the SSC in Block B."
 
     docs = find_relevant_docs(student_message)
     context = build_context(docs)
+    profile_context = build_profile_context(profile)
 
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -161,7 +179,7 @@ async def answer(student_message: str, api_key: str, model_name: str = NVIDIA_MO
         "model": model_name,
         "messages": [
             {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": f"{context}\n\nStudent question: {student_message}\n\nAnswer the student following the hard rules above."},
+            {"role": "user", "content": f"{profile_context}\n\n{context}\n\nStudent question: {student_message}\n\nAnswer the student following the hard rules above. If you cite a source, put it at the end."},
         ],
         "temperature": 0.3,
         "max_tokens": 4000,

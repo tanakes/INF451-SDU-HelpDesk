@@ -102,6 +102,32 @@ def list_open_tickets() -> List[dict]:
     return [r for r in rows if r.get("status") == "pending"]
 
 
+def _user_state_path() -> str:
+    return _path("user_state.json")
+
+
+def get_user_state(user_id: str) -> dict:
+    p = _user_state_path()
+    rows = _load("user_state.json")
+    for r in rows:
+        if str(r.get("user_id")) == str(user_id):
+            return r.get("state") or {}
+    return {}
+
+
+def set_user_state(user_id: str, state: dict):
+    rows = _load("user_state.json")
+    rows = [r for r in str(r.get("user_id")) != str(user_id)]
+    rows.append({"user_id": str(user_id), "state": state})
+    _save("user_state.json", rows)
+
+
+def clear_user_state(user_id: str):
+    rows = _load("user_state.json")
+    rows = [r for r in str(r.get("user_id")) != str(user_id)]
+    _save("user_state.json", rows)
+
+
 def save_session(session_id: str, sender: str, channel: str):
     rows = _load("sessions.json")
     rows = [r for r in rows if r.get("session_id") != session_id]

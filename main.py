@@ -35,6 +35,9 @@ from db import (
     list_open_tickets,
     save_session,
     append_session_transcript,
+    get_user_state,
+    set_user_state,
+    clear_user_state,
 )
 
 app = FastAPI(title="SDU Help Desk Bot")
