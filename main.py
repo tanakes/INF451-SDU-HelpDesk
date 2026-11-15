@@ -292,7 +292,7 @@ MENU_MESSAGE = (
 )
 
 HELP_MESSAGE = (
-    "рџ† SDU Help Desk Bot Commands:\n\n"
+    "🆘 SDU Help Desk Bot Commands:\n\n"
     "/start - Start the bot and show welcome menu\n"
     "/menu - Show topic menu\n"
     "/profile - View or set your academic profile\n"
