@@ -40,6 +40,25 @@ Do not output internal monologue, planning, or status updates. Output only the f
 """
 
 
+def _display_source(doc) -> str:
+    src = (getattr(doc, "source_url", None) or "").strip()
+    if src:
+        # Prefer the official file/page name rather than internal paths.
+        name = src.rstrip("/").split("/")[-1].split("?")[0]
+        if name:
+            name = name.replace("%20", " ")
+            if name.lower().endswith(".md"):
+                name = name[:-3]
+            return name
+        return src
+    title = (getattr(doc, "title", "") or "").strip()
+    if title:
+        return title
+    path = getattr(doc, "path", "") or ""
+    base = os.path.splitext(os.path.basename(path))[0]
+    return base.replace("_", " ").strip() or "Official regulation"
+
+
 def build_context(docs) -> str:
     if not docs:
         return "No relevant knowledge-base documents found."
@@ -47,7 +66,7 @@ def build_context(docs) -> str:
     for doc in docs:
         parts.append(
             f"\n--- {doc.title} ({doc.category}) ---\n"
-            f"Source: {doc.path}\n"
+            f"Source: {_display_source(doc)}\n"
             f"{doc.body[:1500]}"
         )
     return "\n".join(parts)
@@ -217,15 +236,39 @@ async def answer(student_message: str, api_key: str, model_name: str = NVIDIA_MO
             return "I could not generate a reply. Please try again."
         # Normalize source placement: move "Source:" lines/blocks to the end.
         lines = [ln.rstrip() for ln in text.strip().splitlines()]
-        source_lines = [ln for ln in lines if ln.strip().lower().startswith("source:") or "/knowledge_base/" in ln and "source" in ln.lower()]
+        source_lines = []
+        other_lines = []
+        for ln in lines:
+            is_source = ln.strip().lower().startswith("source:")
+            if not is_source and "/knowledge_base/" in ln.lower() and "source" in ln.lower():
+                is_source = True
+            if is_source:
+                cleaned = ln.strip()
+                # Replace internal absolute/relative .md paths with official file name
+                m = re.search(r"Source:\s*(.+)$", cleaned, flags=re.IGNORECASE)
+                if m:
+                    val = m.group(1).strip()
+                    if "/knowledge_base/" in val or val.lower().endswith(".md"):
+                        base = os.path.splitext(os.path.basename(val.replace("\\", "/")))[0]
+                        val = base.replace("_", " ").strip() or val
+                    cleaned = f"Source: {val}"
+                source_lines.append(cleaned)
+            else:
+                other_lines.append(ln)
         if source_lines:
-            non_source = [ln for ln in lines if ln not in source_lines]
-            # remove empty leading/trailing caused by move
-            while non_source and not non_source[0].strip():
-                non_source.pop(0)
-            while non_source and not non_source[-1].strip():
-                non_source.pop()
-            text = "\n".join(non_source).strip() + "\n\n" + "\n".join(source_lines).strip()
+            while other_lines and not other_lines[0].strip():
+                other_lines.pop(0)
+            while other_lines and not other_lines[-1].strip():
+                other_lines.pop()
+            # dedupe while preserving order
+            seen = set()
+            uniq_sources = []
+            for sline in source_lines:
+                key = sline.lower()
+                if key not in seen:
+                    seen.add(key)
+                    uniq_sources.append(sline)
+            text = "\n".join(other_lines).strip() + "\n\n" + "\n".join(uniq_sources).strip()
         return text.strip()
     except httpx.HTTPStatusError as exc:
         return f"I'm temporarily unable to answer (API error {exc.response.status_code}). Please contact the SSC in Block B or try again later."

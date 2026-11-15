@@ -1,7 +1,8 @@
-"""Database layer — file-based persistence.
+"""Database layer - persistent storage.
 
-Mirrors the Postgres schema but stores data in JSON files under data/.
-No external database dependency needed for Render free tier.
+Uses Postgres/Neon when DATABASE_URL is set; otherwise falls back to JSON files
+under DATA_DIR (default: ./data). On Render, local files are ephemeral unless a
+persistent disk is mounted and DATA_DIR points to it.
 """
 from __future__ import annotations
 
@@ -9,9 +10,22 @@ import json
 import os
 from contextlib import contextmanager
 from datetime import datetime, timezone
-from typing import Optional, List
+from typing import Optional
 
 DATA_DIR = os.environ.get("DATA_DIR") or os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+DATABASE_URL = (os.environ.get("DATABASE_URL") or "").strip()
+
+_use_db = False
+_psycopg = None
+if DATABASE_URL:
+    try:
+        import psycopg as _psycopg_mod  # type: ignore
+
+        _psycopg = _psycopg_mod
+        _use_db = True
+    except Exception:
+        _psycopg = None
+        _use_db = False
 
 
 def _path(name: str) -> str:
@@ -30,8 +44,9 @@ def _load(name: str) -> list:
         return []
 
 
-def _save(name: str, rows: list):
+def _save(name: str, rows: list) -> None:
     p = _path(name)
+    os.makedirs(os.path.dirname(p), exist_ok=True)
     with open(p, "w", encoding="utf-8") as fh:
         json.dump(rows, fh, indent=2, ensure_ascii=False)
 
@@ -41,14 +56,113 @@ def tx():
     yield None
 
 
-def init_schema():
+def _db_exec(query: str, params: tuple = (), fetch: str | None = None):
+    if not _use_db or _psycopg is None:
+        raise RuntimeError("database not configured")
+    conn = _psycopg.connect(DATABASE_URL)
+    try:
+        with conn:
+            with conn.cursor() as cur:
+                cur.execute(query, params)
+                if fetch == "one":
+                    return cur.fetchone()
+                if fetch == "all":
+                    return cur.fetchall()
+                return None
+    finally:
+        conn.close()
+
+
+def init_schema() -> None:
+    if _use_db:
+        try:
+            _db_exec(
+                """
+                CREATE TABLE IF NOT EXISTS query_log (
+                    id BIGSERIAL PRIMARY KEY,
+                    timestamp_utc TEXT,
+                    category TEXT,
+                    language TEXT,
+                    outcome TEXT,
+                    summary TEXT
+                )
+                """
+            )
+            _db_exec(
+                """
+                CREATE TABLE IF NOT EXISTS student_profiles (
+                    user_id TEXT PRIMARY KEY,
+                    degree TEXT,
+                    year INTEGER,
+                    major TEXT,
+                    raw_text TEXT,
+                    updated_at_utc TEXT
+                )
+                """
+            )
+            _db_exec(
+                """
+                CREATE TABLE IF NOT EXISTS tickets (
+                    ticket_id TEXT PRIMARY KEY,
+                    user_id TEXT,
+                    sender TEXT,
+                    context TEXT,
+                    created_at TEXT,
+                    session_id TEXT,
+                    status TEXT,
+                    resolution_message TEXT
+                )
+                """
+            )
+            _db_exec(
+                """
+                CREATE TABLE IF NOT EXISTS sessions (
+                    session_id TEXT PRIMARY KEY,
+                    sender TEXT,
+                    channel TEXT,
+                    last_active_utc TEXT
+                )
+                """
+            )
+            _db_exec(
+                """
+                CREATE TABLE IF NOT EXISTS session_transcripts (
+                    id BIGSERIAL PRIMARY KEY,
+                    session_id TEXT,
+                    timestamp_utc TEXT,
+                    user_msg TEXT,
+                    bot_reply TEXT
+                )
+                """
+            )
+            _db_exec(
+                """
+                CREATE TABLE IF NOT EXISTS user_state (
+                    user_id TEXT PRIMARY KEY,
+                    state_json TEXT
+                )
+                """
+            )
+            return
+        except Exception:
+            pass
+
     os.makedirs(DATA_DIR, exist_ok=True)
-    for name in ["query_log.json", "student_profiles.json", "tickets.json", "sessions.json"]:
+    for name in ["query_log.json", "student_profiles.json", "tickets.json", "sessions.json", "user_state.json"]:
         if not os.path.exists(_path(name)):
             _save(name, [])
 
 
 def log_query(timestamp_utc: str, category: str, language: str, outcome: str, summary: str):
+    if _use_db:
+        try:
+            _db_exec(
+                "INSERT INTO query_log (timestamp_utc, category, language, outcome, summary) VALUES (%s,%s,%s,%s,%s)",
+                (timestamp_utc, category, language, outcome, summary),
+            )
+            return
+        except Exception:
+            pass
     rows = _load("query_log.json")
     rows.append({
         "timestamp_utc": timestamp_utc,
@@ -61,18 +175,48 @@ def log_query(timestamp_utc: str, category: str, language: str, outcome: str, su
 
 
 def get_profile(user_id: str) -> Optional[dict]:
+    if _use_db:
+        try:
+            row = _db_exec(
+                "SELECT user_id, degree, year, major, raw_text, updated_at_utc FROM student_profiles WHERE user_id=%s",
+                (str(user_id),),
+                fetch="one",
+            )
+            if not row:
+                return None
+            return {
+                "user_id": row[0], "degree": row[1], "year": row[2], "major": row[3],
+                "raw_text": row[4], "updated_at_utc": row[5],
+            }
+        except Exception:
+            pass
     rows = _load("student_profiles.json")
     for r in rows:
-        if r.get("user_id") == user_id:
+        if str(r.get("user_id")) == str(user_id):
             return r
     return None
 
 
 def save_profile(user_id: str, degree: str, year, major: str, raw_text: str, updated_at_utc: str):
+    if _use_db:
+        try:
+            _db_exec(
+                """
+                INSERT INTO student_profiles (user_id, degree, year, major, raw_text, updated_at_utc)
+                VALUES (%s,%s,%s,%s,%s,%s)
+                ON CONFLICT (user_id) DO UPDATE SET
+                    degree=EXCLUDED.degree, year=EXCLUDED.year, major=EXCLUDED.major,
+                    raw_text=EXCLUDED.raw_text, updated_at_utc=EXCLUDED.updated_at_utc
+                """,
+                (str(user_id), degree, year, major, raw_text, updated_at_utc),
+            )
+            return
+        except Exception:
+            pass
     rows = _load("student_profiles.json")
-    rows = [r for r in rows if r.get("user_id") != user_id]
+    rows = [r for r in rows if str(r.get("user_id")) != str(user_id)]
     rows.append({
-        "user_id": user_id,
+        "user_id": str(user_id),
         "degree": degree,
         "year": year,
         "major": major,
@@ -83,10 +227,22 @@ def save_profile(user_id: str, degree: str, year, major: str, raw_text: str, upd
 
 
 def create_ticket(ticket_id: str, user_id: str, sender: str, context: str, created_at: str, session_id: Optional[str]):
+    if _use_db:
+        try:
+            _db_exec(
+                """
+                INSERT INTO tickets (ticket_id, user_id, sender, context, created_at, session_id, status, resolution_message)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+                """,
+                (ticket_id, str(user_id), sender, context, created_at, session_id, "pending", None),
+            )
+            return
+        except Exception:
+            pass
     rows = _load("tickets.json")
     rows.append({
         "ticket_id": ticket_id,
-        "user_id": user_id,
+        "user_id": str(user_id),
         "sender": sender,
         "context": context,
         "created_at": created_at,
@@ -97,17 +253,33 @@ def create_ticket(ticket_id: str, user_id: str, sender: str, context: str, creat
     _save("tickets.json", rows)
 
 
-def list_open_tickets() -> List[dict]:
+def list_open_tickets() -> list[dict]:
+    if _use_db:
+        try:
+            rows = _db_exec(
+                "SELECT ticket_id, user_id, sender, context, created_at, session_id, status, resolution_message FROM tickets WHERE status=%s ORDER BY created_at DESC",
+                ("pending",),
+                fetch="all",
+            ) or []
+            return [{
+                "ticket_id": r[0], "user_id": r[1], "sender": r[2], "context": r[3],
+                "created_at": r[4], "session_id": r[5], "status": r[6], "resolution_message": r[7],
+            } for r in rows]
+        except Exception:
+            pass
     rows = _load("tickets.json")
     return [r for r in rows if r.get("status") == "pending"]
 
 
-def _user_state_path() -> str:
-    return _path("user_state.json")
-
-
 def get_user_state(user_id: str) -> dict:
-    p = _user_state_path()
+    if _use_db:
+        try:
+            row = _db_exec("SELECT state_json FROM user_state WHERE user_id=%s", (str(user_id),), fetch="one")
+            if not row or not row[0]:
+                return {}
+            return json.loads(row[0])
+        except Exception:
+            pass
     rows = _load("user_state.json")
     for r in rows:
         if str(r.get("user_id")) == str(user_id):
@@ -116,34 +288,76 @@ def get_user_state(user_id: str) -> dict:
 
 
 def set_user_state(user_id: str, state: dict):
+    if _use_db:
+        try:
+            payload = json.dumps(state, ensure_ascii=False)
+            _db_exec(
+                """
+                INSERT INTO user_state (user_id, state_json) VALUES (%s,%s)
+                ON CONFLICT (user_id) DO UPDATE SET state_json=EXCLUDED.state_json
+                """,
+                (str(user_id), payload),
+            )
+            return
+        except Exception:
+            pass
     rows = _load("user_state.json")
-    rows = [r for r in str(r.get("user_id")) != str(user_id)]
+    rows = [r for r in rows if str(r.get("user_id")) != str(user_id)]
     rows.append({"user_id": str(user_id), "state": state})
     _save("user_state.json", rows)
 
 
 def clear_user_state(user_id: str):
+    if _use_db:
+        try:
+            _db_exec("DELETE FROM user_state WHERE user_id=%s", (str(user_id),))
+            return
+        except Exception:
+            pass
     rows = _load("user_state.json")
-    rows = [r for r in str(r.get("user_id")) != str(user_id)]
+    rows = [r for r in rows if str(r.get("user_id")) != str(user_id)]
     _save("user_state.json", rows)
 
 
 def save_session(session_id: str, sender: str, channel: str):
+    ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    if _use_db:
+        try:
+            _db_exec(
+                """
+                INSERT INTO sessions (session_id, sender, channel, last_active_utc)
+                VALUES (%s,%s,%s,%s)
+                ON CONFLICT (session_id) DO UPDATE SET
+                    sender=EXCLUDED.sender, channel=EXCLUDED.channel, last_active_utc=EXCLUDED.last_active_utc
+                """,
+                (session_id, sender, channel, ts),
+            )
+            return
+        except Exception:
+            pass
     rows = _load("sessions.json")
     rows = [r for r in rows if r.get("session_id") != session_id]
     rows.append({
         "session_id": session_id,
         "sender": sender,
         "channel": channel,
-        "last_active_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "last_active_utc": ts,
     })
     _save("sessions.json", rows)
 
 
 def append_session_transcript(session_id: str, user_msg: str, bot_reply: str):
-    transcript_path = _path(f"session_{session_id}.json")
-    rows = _load(f"session_{session_id}.json")
     ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    if _use_db:
+        try:
+            _db_exec(
+                "INSERT INTO session_transcripts (session_id, timestamp_utc, user_msg, bot_reply) VALUES (%s,%s,%s,%s)",
+                (session_id, ts, user_msg, bot_reply),
+            )
+            return
+        except Exception:
+            pass
+    rows = _load(f"session_{session_id}.json")
     rows.append({
         "timestamp_utc": ts,
         "user": user_msg,
