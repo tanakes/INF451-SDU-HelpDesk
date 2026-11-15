@@ -11,6 +11,7 @@ import sys
 from typing import Any, Optional
 
 from mcp.server.fastmcp import FastMCP
+import qrcode
 from telethon import TelegramClient
 from telethon.errors import SessionPasswordNeededError
 from telethon.tl.types import Message, User, Chat, Channel
@@ -63,14 +64,16 @@ mcp = FastMCP("telegram-mcp")
 
 
 @mcp.tool()
-async def authenticate(phone: str) -> dict[str, Any]:
-    """Step 1 of authentication: send code request to phone number.
+async def authenticate() -> dict[str, Any]:
+    """Step 1 of authentication: generate QR code for QR login.
 
-    Args:
-        phone: Phone number in international format (e.g. +77001234567).
+    No SMS required. Scan the QR code with your Telegram app:
+    - Mobile: Settings → Devices → Link Desktop Device
+    - Desktop: Settings → Devices → Link Desktop Device
 
     Returns:
-        Status indicating code was sent, or next step required.
+        QR code URL and instructions. Call authenticate_complete()
+        after scanning to confirm authentication.
     """
     global _client, _is_authenticated
 
@@ -89,26 +92,34 @@ async def authenticate(phone: str) -> dict[str, Any]:
             }
 
         try:
-            await _client.send_code_request(phone)
+            qr_login = await _client.qr_login()
             return {
-                "status": "code_sent",
-                "message": f"Verification code sent to {phone}. "
-                "Call authenticate_complete() with the code.",
-                "phone": phone,
+                "status": "qr_ready",
+                "message": "QR code generated. Scan it with your Telegram app.",
+                "qr_url": qr_login.url,
+                "instructions": (
+                    "1. Open Telegram on your phone\n"
+                    "2. Go to Settings → Devices → Link Desktop Device\n"
+                    "3. Scan the QR code below\n"
+                    "4. Keep this window open while scanning\n"
+                    "5. Call authenticate_complete() after scanning"
+                ),
             }
         except Exception as exc:  # noqa: BLE001
             return {
                 "status": "error",
-                "message": f"Failed to send code: {type(exc).__name__}",
+                "message": f"Failed to generate QR code: {type(exc).__name__}",
             }
 
 
 @mcp.tool()
-async def authenticate_complete(code: str, password: Optional[str] = None) -> dict[str, Any]:
-    """Step 2 of authentication: submit verification code (and optional 2FA password).
+async def authenticate_complete(password: Optional[str] = None) -> dict[str, Any]:
+    """Step 2 of authentication: wait for QR login to complete.
+
+    After scanning the QR code with your Telegram app, call this to confirm.
+    If 2FA is enabled, provide your password.
 
     Args:
-        code: Telegram verification code received via SMS/app.
         password: Two-factor authentication password, if 2FA is enabled.
 
     Returns:
@@ -122,12 +133,24 @@ async def authenticate_complete(code: str, password: Optional[str] = None) -> di
             "message": "No active connection. Call authenticate() first.",
         }
 
-    try:
-        await _client.sign_in(code=code)
+    if await _client.is_user_authorized():
         _is_authenticated = True
         return {
             "status": "authenticated",
-            "message": "Successfully authenticated with verification code.",
+            "message": "Successfully authenticated via QR code.",
+        }
+
+    try:
+        await _client.qr_login.wait()
+        _is_authenticated = True
+        return {
+            "status": "authenticated",
+            "message": "Successfully authenticated via QR code.",
+        }
+    except asyncio.TimeoutError:
+        return {
+            "status": "error",
+            "message": "QR code expired. Call authenticate() to generate a new one.",
         }
     except SessionPasswordNeededError:
         if password is None:
@@ -141,7 +164,7 @@ async def authenticate_complete(code: str, password: Optional[str] = None) -> di
             _is_authenticated = True
             return {
                 "status": "authenticated",
-                "message": "Successfully authenticated with 2FA password.",
+                "message": "Successfully authenticated with 2FA.",
             }
         except Exception as exc:  # noqa: BLE001
             return {
@@ -151,7 +174,7 @@ async def authenticate_complete(code: str, password: Optional[str] = None) -> di
     except Exception as exc:  # noqa: BLE001
         return {
             "status": "error",
-            "message": f"Sign-in failed: {type(exc).__name__}",
+            "message": f"QR login failed: {type(exc).__name__}",
         }
 
 

@@ -11,6 +11,7 @@ __pycache__/
 telegram_session.session
 telegram_session.session-journal
 .telegram_session*
+telegram_qr.png
 
 # Environment variables with API credentials
 .env
