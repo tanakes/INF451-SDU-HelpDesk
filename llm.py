@@ -165,6 +165,7 @@ async def answer(student_message: str, api_key: str, model_name: str = NVIDIA_MO
         ],
         "temperature": 0.3,
         "max_tokens": 4000,
+        "reasoning": {"effort": "low"},
     }
 
     try:
@@ -174,6 +175,14 @@ async def answer(student_message: str, api_key: str, model_name: str = NVIDIA_MO
                 headers=headers,
                 json=payload,
             )
+            if resp.status_code >= 400:
+                # Some endpoints/models may reject reasoning param; retry without it.
+                payload.pop("reasoning", None)
+                resp = await client.post(
+                    f"{NVIDIA_BASE_URL}/chat/completions",
+                    headers=headers,
+                    json=payload,
+                )
             resp.raise_for_status()
             data = resp.json()
         msg = data["choices"][0]["message"]

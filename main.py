@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from datetime import datetime, timezone
 
 from fastapi import FastAPI, Header, HTTPException, Request, Response
@@ -276,6 +277,54 @@ def _format_dispatch_resource(r: dict) -> str:
     return f"ℹ️ {title} — {mode}"
 
 
+def _is_staff_chat(chat_id: str | int) -> bool:
+    return bool(STAFF_GROUP_CHAT_ID) and str(chat_id) == str(STAFF_GROUP_CHAT_ID)
+
+
+def _parse_profile_text(text: str) -> dict:
+    lower = text.lower()
+    degree = "Bachelor"
+    if "phd" in lower or "doctoral" in lower or "doctorate" in lower:
+        degree = "PhD"
+    elif "master" in lower:
+        degree = "Master"
+    elif "bachelor" in lower:
+        degree = "Bachelor"
+
+    year = None
+    year_match = re.search(r"\b([1-6])\s*(?:st|nd|rd|th)?\s*[- ]?\s*year\b", lower)
+    if not year_match:
+        year_match = re.search(r"\byear\s*([1-6])\b", lower)
+    if not year_match:
+        ord_map = {"first": 1, "second": 2, "third": 3, "fourth": 4, "fifth": 5, "sixth": 6}
+        for name, num in ord_map.items():
+            if re.search(rf"\b{name}\s+year\b", lower):
+                year = num
+                break
+    if year_match and year is None:
+        try:
+            year = int(year_match.group(1))
+        except Exception:
+            year = None
+
+    major = "General"
+    major_patterns = [
+        r"\b(?:bachelor|master|phd|doctoral)\s+(?:of\s+)?(.+?)\s+student\b",
+        r"\b(?:major(?:ing)?\s+in)\s+(.+?)(?:[,.]|$)",
+        r"\bstudent(?:\s+of|\s+in)\s+(.+?)(?:[,.]|$)",
+    ]
+    for pat in major_patterns:
+        m = re.search(pat, text, flags=re.IGNORECASE)
+        if m:
+            candidate = re.sub(r"\s+", " ", m.group(1)).strip(" .,-")
+            candidate = re.sub(r"\b\d+(?:st|nd|rd|th)?\s*year\b", "", candidate, flags=re.IGNORECASE).strip(" .,-")
+            if candidate and 2 <= len(candidate) <= 60:
+                major = candidate.title()
+                break
+
+    return {"degree": degree, "year": year, "major": major}
+
+
 # ---------------------------------------------------------------------------
 # Webhook
 # ---------------------------------------------------------------------------
@@ -377,8 +426,10 @@ async def webhook(request: Request, x_telegram_bot_api_secret_token: str | None 
 
         # ── US-10: /tickets command (staff only) ──
         if lower == "/tickets":
-            if STAFF_GROUP_CHAT_ID and chat_id != STAFF_GROUP_CHAT_ID:
-                _send_message(chat_id, "🔒 Access Restricted: This command is only available inside the authorized staff group.")
+            if not _is_staff_chat(chat_id):
+                reply = "🔒 Access Restricted: This command is only available inside the authorized staff group."
+                _send_message(chat_id, reply)
+                _save_session_transcript(session_id, sender, "/tickets", reply)
                 return Response(status_code=200)
             tickets = list_open_tickets()
             lines = ["📋 Open support tickets:"]
@@ -386,7 +437,7 @@ async def webhook(request: Request, x_telegram_bot_api_secret_token: str | None 
                 lines.append("None.")
             else:
                 for t in tickets:
-                    lines.append(f"• {t['ticket_id']}: {t['sender']} — {t['context'][:80]}")
+                    lines.append(f"• {t['ticket_id']}: {t.get('sender','Unknown')} — {t.get('context','')[:80]}")
             reply = "\n".join(lines)
             result = _send_message(chat_id, reply)
             if not result["success"]:
@@ -396,8 +447,10 @@ async def webhook(request: Request, x_telegram_bot_api_secret_token: str | None 
 
         # ── US-06: /summary command (staff only) ──
         if lower == "/summary":
-            if STAFF_GROUP_CHAT_ID and chat_id != STAFF_GROUP_CHAT_ID:
-                _send_message(chat_id, "🔒 Access Restricted: This command is only available inside the authorized staff group.")
+            if not _is_staff_chat(chat_id):
+                reply = "🔒 Access Restricted: This command is only available inside the authorized staff group."
+                _send_message(chat_id, reply)
+                _save_session_transcript(session_id, sender, "/summary", reply)
                 return Response(status_code=200)
             reply = await answer("Show me the executive summary of student questions (answered vs not covered, by category and language).", NVIDIA_API_KEY)
             result = _send_message(chat_id, reply)
@@ -494,14 +547,18 @@ async def webhook(request: Request, x_telegram_bot_api_secret_token: str | None 
                 _save_session_transcript(session_id, sender, text, reply if result["success"] else f"Document dispatch failed: {result.get('error', 'unknown')}")
                 return Response(status_code=200)
 
-        # ── US-08: Profile setting from natural language ──
-        if any(kw in lower for kw in ["i am a", "i'm a", "my degree", "student year"]) and any(
-            kw in lower for kw in ["bachelor", "master", "phd", "year", "student"]
+        # US-08: Profile setting from natural language
+        if any(kw in lower for kw in ["i am a", "i'm a", "my degree", "student year", "my major"]) and any(
+            kw in lower for kw in ["bachelor", "master", "phd", "doctoral", "year", "student"]
         ):
-            save_profile(chat_id, "Bachelor", None, "General", text[:100], now)
+            prof = _parse_profile_text(text)
+            save_profile(chat_id, prof["degree"], prof["year"], prof["major"], text[:200], now)
             reply = (
                 "✅ Profile updated!\n\n"
-                "I've saved your academic information. Use /profile to view it anytime."
+                f"Degree: {prof['degree']}\n"
+                f"Major: {prof['major']}\n"
+                f"Year: {prof['year'] if prof['year'] is not None else 'N/A'}\n\n"
+                "Use /profile to view it anytime."
             )
             result = _send_message(chat_id, reply)
             if not result["success"]:
