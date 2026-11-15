@@ -1,4 +1,4 @@
-"""SDU Help Desk Bot — Telegram webhook server for Render.
+﻿"""SDU Help Desk Bot вЂ” Telegram webhook server for Render.
 
 Implements User Stories US-01 through US-10 (Sprints 1-5).
 
@@ -47,7 +47,7 @@ WEBHOOK_SECRET = os.environ.get("WEBHOOK_SECRET", "")
 STAFF_GROUP_CHAT_ID = os.environ.get("STAFF_GROUP_CHAT_ID", "")
 NVIDIA_API_KEY = os.environ.get("NVIDIA_API_KEY", "")
 PORT = int(os.environ.get("PORT", "8000"))
-PUBLIC_BASE_URL = os.environ.get("RENDER_EXTERNAL_URL", "").rstrip("/") or "https://sdu-helpdesk-bot-fresh.onrender.com"
+PUBLIC_BASE_URL = os.environ.get("RENDER_EXTERNAL_URL", "").rstrip("/") or "https://sdu-helpdesk-bot.onrender.com"
 
 TELEGRAM_API = "https://api.telegram.org/bot{token}/{method}"
 
@@ -273,7 +273,7 @@ def _save_session_transcript(session_id: str, sender: str, user_msg: str, bot_re
 # US-01 / US-02: Commands and menu
 # ---------------------------------------------------------------------------
 WELCOME_MESSAGE = (
-    "🎓 Welcome to the SDU University Help Desk!\n\n"
+    "рџЋ“ Welcome to the SDU University Help Desk!\n\n"
     "Choose a topic:\n\n"
     "1. Tuition Fees\n"
     "2. Course Add/Drop\n"
@@ -283,7 +283,7 @@ WELCOME_MESSAGE = (
 )
 
 MENU_MESSAGE = (
-    "📋 SDU Help Desk Menu:\n\n"
+    "рџ“‹ SDU Help Desk Menu:\n\n"
     "1. Tuition Fees\n"
     "2. Course Add/Drop\n"
     "3. Dormitory\n"
@@ -292,7 +292,7 @@ MENU_MESSAGE = (
 )
 
 HELP_MESSAGE = (
-    "🆘 SDU Help Desk Bot Commands:\n\n"
+    "рџ† SDU Help Desk Bot Commands:\n\n"
     "/start - Start the bot and show welcome menu\n"
     "/menu - Show topic menu\n"
     "/profile - View or set your academic profile\n"
@@ -308,12 +308,12 @@ def _format_dispatch_resource(r: dict) -> str:
     mode = r.get("dispatch_mode", "link")
     title = r.get("title", "Untitled")
     if mode == "file":
-        return f"📄 {title} — official PDF available (file dispatch)"
+        return f"рџ“„ {title} вЂ” official PDF available (file dispatch)"
     if mode == "link":
-        return f"🔗 {title} — {r.get('url', 'URL not available')}"
+        return f"рџ”— {title} вЂ” {r.get('url', 'URL not available')}"
     if mode == "unavailable":
-        return f"❌ {title} — Not available for download. Please contact the SSC in Block B."
-    return f"ℹ️ {title} — {mode}"
+        return f"вќЊ {title} вЂ” Not available for download. Please contact the SSC in Block B."
+    return f"в„№пёЏ {title} вЂ” {mode}"
 
 
 def _is_staff_chat(chat_id: str | int) -> bool:
@@ -401,7 +401,7 @@ async def webhook(request: Request, x_telegram_bot_api_secret_token: str | None 
     lower = text.strip().lower()
 
     try:
-        # ── US-01: /start command ──
+        # в”Ђв”Ђ US-01: /start command в”Ђв”Ђ
         if lower == "/start":
             result = _send_message(chat_id, WELCOME_MESSAGE)
             if not result["success"]:
@@ -410,7 +410,7 @@ async def webhook(request: Request, x_telegram_bot_api_secret_token: str | None 
             log_query(now, "System", "English", "answered", "User started bot with /start")
             return Response(status_code=200)
 
-        # ── US-02: /menu command ──
+        # в”Ђв”Ђ US-02: /menu command в”Ђв”Ђ
         if lower == "/menu":
             result = _send_message(chat_id, MENU_MESSAGE)
             if not result["success"]:
@@ -418,7 +418,7 @@ async def webhook(request: Request, x_telegram_bot_api_secret_token: str | None 
             _save_session_transcript(session_id, sender, "/menu", MENU_MESSAGE)
             return Response(status_code=200)
 
-        # ── US-01: /help command ──
+        # в”Ђв”Ђ US-01: /help command в”Ђв”Ђ
         if lower == "/help":
             result = _send_message(chat_id, HELP_MESSAGE)
             if not result["success"]:
@@ -426,12 +426,12 @@ async def webhook(request: Request, x_telegram_bot_api_secret_token: str | None 
             _save_session_transcript(session_id, sender, "/help", HELP_MESSAGE)
             return Response(status_code=200)
 
-        # ── US-08: /profile command ──
+        # в”Ђв”Ђ US-08: /profile command в”Ђв”Ђ
         if lower == "/profile":
             prof = get_profile(chat_id)
             if prof:
                 reply = (
-                    f"🎓 Your academic profile:\n\n"
+                    f"рџЋ“ Your academic profile:\n\n"
                     f"Degree: {prof.get('degree', 'N/A')}\n"
                     f"Major: {prof.get('major', 'N/A')}\n"
                     f"Year: {prof.get('year', 'N/A')}\n"
@@ -449,45 +449,72 @@ async def webhook(request: Request, x_telegram_bot_api_secret_token: str | None 
             _save_session_transcript(session_id, sender, "/profile", reply)
             return Response(status_code=200)
 
-        # ── US-09: /advisor command ──
-        if lower == "/advisor" or lower in ("advisor", "ticket", "human", "escalate"):
-            ticket_id = f"T-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}-{chat_id[-4:]}"
-            escalation_context = text.strip()
-            if lower == "/advisor":
-                escalation_context = "Student requested to speak with a human advisor."
-            create_ticket(ticket_id, chat_id, sender, escalation_context, now, session_id)
-            notify = (
-                "🚨 New Escalation Ticket:\n\n"
-                f"Student: {sender} (ID: {chat_id})\n"
-                f"Request: {escalation_context}\n\n"
-                f"Staff Actions:\n"
-                f"1. Use /tickets to view open tickets\n"
-                f"2. Resolve ticket for {ticket_id}\n"
-            )
-            if STAFF_GROUP_CHAT_ID:
-                _send_message(STAFF_GROUP_CHAT_ID, notify)
-            reply = "I have opened a support ticket for your request, and a human advisor will be notified shortly."
+        # Advisor escalation flow
+        if lower == "/advisor":
+            set_user_state(chat_id, {"awaiting_advisor_question": True})
+            reply = "Please write your question for the advisor, and I will forward it as a support ticket."
+            result = _send_message(chat_id, reply)
+            if not result["success"]:
+                print(f"SEND_FAILED: {result['error']}")
+            _save_session_transcript(session_id, sender, "/advisor", reply)
+            return Response(status_code=200)
+
+        state = get_user_state(chat_id)
+        if state.get("awaiting_advisor_question"):
+            if lower in ("/cancel", "cancel"):
+                clear_user_state(chat_id)
+                reply = "Advisor request cancelled."
+                result = _send_message(chat_id, reply)
+                if not result["success"]:
+                    print(f"SEND_FAILED: {result['error']}")
+                _save_session_transcript(session_id, sender, text, reply)
+                return Response(status_code=200)
+            if not text.startswith("/"):
+                clear_user_state(chat_id)
+                ticket_id = f"T-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}-{chat_id[-4:]}"
+                escalation_context = text.strip()
+                create_ticket(ticket_id, chat_id, sender, escalation_context, now, session_id)
+                notify = (
+                    "рџљЁ New Escalation Ticket\n\n"
+                    f"Student: {sender}\n"
+                    f"Question: {escalation_context}\n\n"
+                    f"Ticket ID: {ticket_id}\n"
+                    "Staff can use /tickets in the staff group to view open tickets."
+                )
+                if STAFF_GROUP_CHAT_ID:
+                    _send_message(STAFF_GROUP_CHAT_ID, notify)
+                reply = "Your question has been sent to a human advisor. They will follow up with you."
+                result = _send_message(chat_id, reply)
+                if not result["success"]:
+                    print(f"SEND_FAILED: {result['error']}")
+                _save_session_transcript(session_id, sender, text, reply)
+                log_query(now, "Other / Not covered", "English", "answered", escalation_context[:160])
+                return Response(status_code=200)
+            clear_user_state(chat_id)
+
+        if lower in ("advisor", "ticket", "human", "escalate"):
+            set_user_state(chat_id, {"awaiting_advisor_question": True})
+            reply = "Please write your question for the advisor, and I will forward it as a support ticket."
             result = _send_message(chat_id, reply)
             if not result["success"]:
                 print(f"SEND_FAILED: {result['error']}")
             _save_session_transcript(session_id, sender, text, reply)
-            log_query(now, "Other / Not covered", "English", "answered", "Student requested human advisor escalation")
             return Response(status_code=200)
 
-        # ── US-10: /tickets command (staff only) ──
+        # в”Ђв”Ђ US-10: /tickets command (staff only) в”Ђв”Ђ
         if lower == "/tickets":
             if not _is_staff_chat(chat_id):
-                reply = "🔒 Access Restricted: This command is only available inside the authorized staff group."
+                reply = "рџ”’ Access Restricted: This command is only available inside the authorized staff group."
                 _send_message(chat_id, reply)
                 _save_session_transcript(session_id, sender, "/tickets", reply)
                 return Response(status_code=200)
             tickets = list_open_tickets()
-            lines = ["📋 Open support tickets:"]
+            lines = ["рџ“‹ Open support tickets:"]
             if not tickets:
                 lines.append("None.")
             else:
                 for t in tickets:
-                    lines.append(f"• {t['ticket_id']}: {t.get('sender','Unknown')} — {t.get('context','')[:80]}")
+                    lines.append(f"вЂў {t['ticket_id']}: {t.get('sender','Unknown')} вЂ” {t.get('context','')[:80]}")
             reply = "\n".join(lines)
             result = _send_message(chat_id, reply)
             if not result["success"]:
@@ -495,10 +522,10 @@ async def webhook(request: Request, x_telegram_bot_api_secret_token: str | None 
             _save_session_transcript(session_id, sender, "/tickets", reply)
             return Response(status_code=200)
 
-        # ── US-06: /summary command (staff only) ──
+        # в”Ђв”Ђ US-06: /summary command (staff only) в”Ђв”Ђ
         if lower == "/summary":
             if not _is_staff_chat(chat_id):
-                reply = "🔒 Access Restricted: This command is only available inside the authorized staff group."
+                reply = "рџ”’ Access Restricted: This command is only available inside the authorized staff group."
                 _send_message(chat_id, reply)
                 _save_session_transcript(session_id, sender, "/summary", reply)
                 return Response(status_code=200)
@@ -510,7 +537,7 @@ async def webhook(request: Request, x_telegram_bot_api_secret_token: str | None 
             log_query(now, "Campus Services", "English", "answered", "Staff requested executive summary")
             return Response(status_code=200)
 
-        # ── US-04: Document dispatch commands ──
+        # в”Ђв”Ђ US-04: Document dispatch commands в”Ђв”Ђ
         # Handle requests for specific documents like "send me the campus map"
         doc_keywords = {
             "campus map": "campus_map_image",
@@ -534,7 +561,7 @@ async def webhook(request: Request, x_telegram_bot_api_secret_token: str | None 
         if doc_requested:
             resource = get_dispatch_resource(doc_requested)
             if not resource:
-                reply = "❌ I couldn't find that document. Please contact the SSC in Block B."
+                reply = "вќЊ I couldn't find that document. Please contact the SSC in Block B."
                 result = _send_message(chat_id, reply)
                 if not result["success"]:
                     print(f"SEND_FAILED: {result['error']}")
@@ -545,7 +572,7 @@ async def webhook(request: Request, x_telegram_bot_api_secret_token: str | None 
 
             if mode == "unavailable":
                 reply = (
-                    f"❌ {resource.get('title', 'Document')} is not available for download.\n\n"
+                    f"вќЊ {resource.get('title', 'Document')} is not available for download.\n\n"
                     f"Reason: {resource.get('reason', 'No reason provided.')}\n\n"
                     f"Please contact the SSC in Block B for assistance."
                 )
@@ -558,7 +585,7 @@ async def webhook(request: Request, x_telegram_bot_api_secret_token: str | None 
             if mode == "link":
                 url = resource.get("url", "")
                 reply = (
-                    f"🔗 {resource.get('title', 'Document')}\n\n"
+                    f"рџ”— {resource.get('title', 'Document')}\n\n"
                     f"Link: {url}\n\n"
                     f"This is the official source. Please visit the link for the full document."
                 )
@@ -571,7 +598,7 @@ async def webhook(request: Request, x_telegram_bot_api_secret_token: str | None 
             if mode == "file":
                 file_path = resource.get("file", "")
                 if not file_path:
-                    reply = f"❌ File path not configured for {resource.get('title', 'Document')}."
+                    reply = f"вќЊ File path not configured for {resource.get('title', 'Document')}."
                     result = _send_message(chat_id, reply)
                     if not result["success"]:
                         print(f"SEND_FAILED: {result['error']}")
@@ -588,10 +615,10 @@ async def webhook(request: Request, x_telegram_bot_api_secret_token: str | None 
                     result = _send_document(chat_id, abs_path)
 
                 if not result["success"]:
-                    reply = f"❌ Failed to send {resource.get('title', 'Document')}. Error: {result['error']}"
+                    reply = f"вќЊ Failed to send {resource.get('title', 'Document')}. Error: {result['error']}"
                     _send_message(chat_id, reply)
                 else:
-                    reply = f"📎 Here is your document: {resource.get('title', 'Document')}"
+                    reply = f"рџ“Ћ Here is your document: {resource.get('title', 'Document')}"
                     _send_message(chat_id, reply)
 
                 _save_session_transcript(session_id, sender, text, reply if result["success"] else f"Document dispatch failed: {result.get('error', 'unknown')}")
@@ -604,7 +631,7 @@ async def webhook(request: Request, x_telegram_bot_api_secret_token: str | None 
             prof = _parse_profile_text(text)
             save_profile(chat_id, prof["degree"], prof["year"], prof["major"], text[:200], now)
             reply = (
-                "✅ Profile updated!\n\n"
+                "вњ… Profile updated!\n\n"
                 f"Degree: {prof['degree']}\n"
                 f"Major: {prof['major']}\n"
                 f"Year: {prof['year'] if prof['year'] is not None else 'N/A'}\n\n"
@@ -616,9 +643,10 @@ async def webhook(request: Request, x_telegram_bot_api_secret_token: str | None 
             _save_session_transcript(session_id, sender, text, reply)
             return Response(status_code=200)
 
-        # ── US-03 / US-05: Normal Q&A path — grounded LLM answer ──
+        # Normal Q&A path вЂ” grounded LLM answer with profile context
+        profile = get_profile(chat_id)
         kb_docs = find_relevant_docs(text)
-        reply = await answer(text, NVIDIA_API_KEY)
+        reply = await answer(text, NVIDIA_API_KEY, profile=profile)
         result = _send_message(chat_id, reply)
         if not result["success"]:
             print(f"SEND_FAILED: {result['error']}")
@@ -626,7 +654,6 @@ async def webhook(request: Request, x_telegram_bot_api_secret_token: str | None 
         category = kb_docs[0].category if kb_docs else "Other / Not covered"
         log_query(now, category, "English", "answered" if kb_docs else "not covered", text[:160])
         return Response(status_code=200)
-
     except Exception as exc:
         error_reply = f"Debug error: {type(exc).__name__}: {str(exc)[:200]}"
         _send_message(chat_id, error_reply)
