@@ -2,7 +2,7 @@
 
 Endpoints:
   GET  /          health check
-  POST /webhook/{bot_token}  Telegram webhook entry point
+  POST /webhook   Telegram webhook entry point
 
 Env vars:
   BOT_TOKEN, NVIDIA_API_KEY, DATABASE_URL, WEBHOOK_SECRET,
@@ -55,10 +55,8 @@ def _send_message(chat_id: str, text: str, parse_mode=None):
         pass  # never break the webhook on send failure
 
 
-@app.post("/webhook/{token}")
-async def webhook(token: str, request: Request, x_telegram_bot_api_secret_token: str | None = Header(default=None)):
-    if token != BOT_TOKEN:
-        raise HTTPException(status_code=401, detail="invalid bot token")
+@app.post("/webhook")
+async def webhook(request: Request, x_telegram_bot_api_secret_token: str | None = Header(default=None)):
     if WEBHOOK_SECRET and x_telegram_bot_api_secret_token != WEBHOOK_SECRET:
         raise HTTPException(status_code=401, detail="invalid secret token")
 
