@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import os
 import json
+import re
 
 import httpx
 
@@ -51,6 +52,49 @@ def build_context(docs) -> str:
     return "\n".join(parts)
 
 
+def _extract_final_answer(reasoning_content: str) -> str:
+    """Extract the final user-facing answer from reasoning_content.
+
+    NVIDIA Nemotron puts its internal thinking process in reasoning_content.
+    The final answer typically follows a delimiter like "Here's the response:"
+    or appears after the thinking sections. We strip the thinking and return
+    only the answer portion.
+    """
+    if not reasoning_content:
+        return ""
+
+    # Common delimiters that separate thinking from the final answer
+    delimiters = [
+        "Here's the final response:",
+        "Final answer:",
+        "Here's my response:",
+        "Here's the response:",
+        "Final response:",
+        "Answer:",
+        "Here's the answer:",
+    ]
+
+    for delim in delimiters:
+        idx = reasoning_content.rfind(delim)
+        if idx != -1:
+            candidate = reasoning_content[idx + len(delim):].strip()
+            if len(candidate) > 10:
+                return candidate
+
+    # Fallback: look for the last substantial block that doesn't look like thinking
+    blocks = [b.strip() for b in reasoning_content.split("\n\n") if b.strip()]
+    for block in reversed(blocks):
+        # Skip blocks that look like thinking steps (numbered, start with "Analyze", etc.)
+        if re.match(r"^\d+\.\s", block):
+            continue
+        if block.startswith(("Here's a thinking", "Let's draft", "Important:", "But I need", "No asterisks", "No Markdown", "Blank line")):
+            continue
+        if len(block) > 30:
+            return block
+
+    return ""
+
+
 async def answer(student_message: str, api_key: str, model_name: str = NVIDIA_MODEL) -> str:
     if not api_key:
         return "I'm temporarily unable to answer. No AI API key is configured. Please contact the SSC in Block B."
@@ -82,7 +126,9 @@ async def answer(student_message: str, api_key: str, model_name: str = NVIDIA_MO
             resp.raise_for_status()
             data = resp.json()
         msg = data["choices"][0]["message"]
-        content = msg.get("content") or msg.get("reasoning_content") or ""
+        content = msg.get("content") or ""
+        if not content:
+            content = _extract_final_answer(msg.get("reasoning_content") or "")
         return content or "I could not generate a reply. Please try again."
     except httpx.HTTPStatusError as exc:
         return f"I'm temporarily unable to answer (API error {exc.response.status_code}). Please contact the SSC in Block B or try again later."
