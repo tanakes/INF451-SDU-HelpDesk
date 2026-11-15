@@ -205,14 +205,28 @@ async def answer(student_message: str, api_key: str, model_name: str = NVIDIA_MO
             data = resp.json()
         msg = data["choices"][0]["message"]
         content = msg.get("content") or ""
+        text = ""
         if content and len(content) > 10:
-            return content
-        # Fallback: try reasoning_content with stripping
-        reasoning = msg.get("reasoning_content") or ""
-        cleaned = _strip_thinking(reasoning)
-        if cleaned and len(cleaned) > 10:
-            return cleaned
-        return "I could not generate a reply. Please try again."
+            text = content
+        else:
+            reasoning = msg.get("reasoning_content") or ""
+            cleaned = _strip_thinking(reasoning)
+            if cleaned and len(cleaned) > 10:
+                text = cleaned
+        if not text:
+            return "I could not generate a reply. Please try again."
+        # Normalize source placement: move "Source:" lines/blocks to the end.
+        lines = [ln.rstrip() for ln in text.strip().splitlines()]
+        source_lines = [ln for ln in lines if ln.strip().lower().startswith("source:") or "/knowledge_base/" in ln and "source" in ln.lower()]
+        if source_lines:
+            non_source = [ln for ln in lines if ln not in source_lines]
+            # remove empty leading/trailing caused by move
+            while non_source and not non_source[0].strip():
+                non_source.pop(0)
+            while non_source and not non_source[-1].strip():
+                non_source.pop()
+            text = "\n".join(non_source).strip() + "\n\n" + "\n".join(source_lines).strip()
+        return text.strip()
     except httpx.HTTPStatusError as exc:
         return f"I'm temporarily unable to answer (API error {exc.response.status_code}). Please contact the SSC in Block B or try again later."
     except Exception as exc:  # pragma: no cover - runtime safety
