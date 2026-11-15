@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "telegram": {
+      "command": "python",
+      "args": ["telegram_mcp_server.py"],
+      "cwd": "C:\\Users\\Ali\\Desktop\\coding-agent-projects\\vscode-agents\\sdu-helpdesk-render",
+      "env": {}
+    }
+  }
+}

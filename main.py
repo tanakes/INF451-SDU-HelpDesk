@@ -1,5 +1,7 @@
 """SDU Help Desk Bot — Telegram webhook server for Render.
 
+Implements User Stories US-01 through US-10 (Sprints 1-5).
+
 Endpoints:
   GET  /          health check
   GET  /debug     check env var status
@@ -12,6 +14,7 @@ Env vars:
 """
 from __future__ import annotations
 
+import json
 import os
 from datetime import datetime, timezone
 
@@ -19,8 +22,17 @@ from fastapi import FastAPI, Header, HTTPException, Request, Response
 import httpx
 
 from llm import answer
-from knowledge_base import find_relevant_docs
-from db import init_schema, log_query, create_ticket, get_profile, save_profile
+from knowledge_base import find_relevant_docs, DOCS
+from db import (
+    init_schema,
+    log_query,
+    create_ticket,
+    get_profile,
+    save_profile,
+    list_open_tickets,
+    save_session,
+    append_session_transcript,
+)
 
 app = FastAPI(title="SDU Help Desk Bot")
 
@@ -28,10 +40,36 @@ BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
 WEBHOOK_SECRET = os.environ.get("WEBHOOK_SECRET", "")
 STAFF_GROUP_CHAT_ID = os.environ.get("STAFF_GROUP_CHAT_ID", "")
 NVIDIA_API_KEY = os.environ.get("NVIDIA_API_KEY", "")
+PORT = int(os.environ.get("PORT", "8000"))
 
 TELEGRAM_API = "https://api.telegram.org/bot{token}/{method}"
 
 
+# ---------------------------------------------------------------------------
+# US-04 Document dispatch manifest
+# ---------------------------------------------------------------------------
+with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "documents", "manifest.json"), "r", encoding="utf-8") as _f:
+    _DISPATCH_MANIFEST = json.load(_f)["resources"]
+
+_DISPATCH_BY_ID = {r["id"]: r for r in _DISPATCH_MANIFEST}
+_DISPATCH_BY_CATEGORY: dict[str, list[dict]] = {}
+for _r in _DISPATCH_MANIFEST:
+    _DISPATCH_BY_CATEGORY.setdefault(_r["category"], []).append(_r)
+
+
+def get_dispatch_resources(category: str | None = None) -> list[dict]:
+    if category:
+        return _DISPATCH_BY_CATEGORY.get(category, [])
+    return list(_DISPATCH_MANIFEST)
+
+
+def get_dispatch_resource(resource_id: str) -> dict | None:
+    return _DISPATCH_BY_ID.get(resource_id)
+
+
+# ---------------------------------------------------------------------------
+# Startup
+# ---------------------------------------------------------------------------
 @app.on_event("startup")
 def _startup():
     init_schema()
@@ -45,14 +83,16 @@ def _startup():
     else:
         print("STARTUP: All required env vars are set")
 
-    # Set Telegram bot commands
+    # Set Telegram bot commands (US-01)
     if BOT_TOKEN:
         try:
             cmds = [
                 {"command": "start", "description": "Start the bot and show welcome menu"},
-                {"command": "menu", "description": "Show topic menu"},
-                {"command": "profile", "description": "View or set your academic profile"},
-                {"command": "advisor", "description": "Escalate to a human advisor"},
+                {"command": "menu", "description": "Show topic menu (US-02)"},
+                {"command": "profile", "description": "View/set your academic profile (US-08)"},
+                {"command": "advisor", "description": "Escalate to human advisor (US-09)"},
+                {"command": "tickets", "description": "Show open tickets (staff only, US-10)"},
+                {"command": "summary", "description": "Query analytics (staff only, US-06)"},
                 {"command": "help", "description": "Show help information"},
             ]
             httpx.post(
@@ -64,6 +104,9 @@ def _startup():
             pass
 
 
+# ---------------------------------------------------------------------------
+# Health / debug
+# ---------------------------------------------------------------------------
 @app.get("/")
 async def health():
     return {"status": "ok", "service": "sdu-helpdesk-bot"}
@@ -77,6 +120,9 @@ async def debug():
         "nvidia_api_key_set": bool(NVIDIA_API_KEY),
         "staff_group_chat_id": STAFF_GROUP_CHAT_ID or None,
         "webhook_secret_set": bool(WEBHOOK_SECRET),
+        "port": PORT,
+        "kb_docs_count": len(DOCS),
+        "dispatch_resources": len(_DISPATCH_MANIFEST),
     }
 
 
@@ -96,7 +142,10 @@ async def test_send():
         return {"error": str(exc)}
 
 
-def _send_message(chat_id: str, text: str) -> dict:
+# ---------------------------------------------------------------------------
+# Message sending helpers
+# ---------------------------------------------------------------------------
+def _send_message(chat_id: str | int, text: str) -> dict:
     if not BOT_TOKEN:
         return {"success": False, "error": "BOT_TOKEN not configured"}
     payload = {"chat_id": chat_id, "text": text}
@@ -117,16 +166,119 @@ def _send_message(chat_id: str, text: str) -> dict:
         return {"success": False, "error": str(exc)}
 
 
-def _save_session(session_id: str, sender: str, channel: str, text: str, reply: str):
-    """Save session transcript to file-based database."""
-    from db import save_session, append_session_transcript
+def _send_document(chat_id: str | int, file_path: str) -> dict:
+    if not BOT_TOKEN:
+        return {"success": False, "error": "BOT_TOKEN not configured"}
+    if not os.path.exists(file_path):
+        return {"success": False, "error": f"File not found: {file_path}"}
     try:
-        save_session(session_id, sender, channel)
-        append_session_transcript(session_id, text, reply)
+        with open(file_path, "rb") as _f:
+            files = {"document": (_f.name, _f, "application/octet-stream")}
+            data = {"chat_id": chat_id}
+            resp = httpx.post(
+                TELEGRAM_API.format(token=BOT_TOKEN, method="sendDocument"),
+                data=data,
+                files=files,
+                timeout=60,
+            )
+        resp.raise_for_status()
+        result = resp.json()
+        if result.get("ok"):
+            return {"success": True}
+        return {"success": False, "error": f"Telegram API: {result}"}
+    except httpx.HTTPStatusError as exc:
+        return {"success": False, "error": f"HTTP {exc.response.status_code}: {exc.response.text[:200]}"}
+    except Exception as exc:
+        return {"success": False, "error": str(exc)}
+
+
+def _send_photo(chat_id: str | int, file_path: str) -> dict:
+    if not BOT_TOKEN:
+        return {"success": False, "error": "BOT_TOKEN not configured"}
+    if not os.path.exists(file_path):
+        return {"success": False, "error": f"File not found: {file_path}"}
+    try:
+        with open(file_path, "rb") as _f:
+            files = {"photo": (_f.name, _f, "image/jpeg")}
+            data = {"chat_id": chat_id}
+            resp = httpx.post(
+                TELEGRAM_API.format(token=BOT_TOKEN, method="sendPhoto"),
+                data=data,
+                files=files,
+                timeout=60,
+            )
+        resp.raise_for_status()
+        result = resp.json()
+        if result.get("ok"):
+            return {"success": True}
+        return {"success": False, "error": f"Telegram API: {result}"}
+    except httpx.HTTPStatusError as exc:
+        return {"success": False, "error": f"HTTP {exc.response.status_code}: {exc.response.text[:200]}"}
+    except Exception as exc:
+        return {"success": False, "error": str(exc)}
+
+
+# ---------------------------------------------------------------------------
+# Session persistence
+# ---------------------------------------------------------------------------
+def _save_session_transcript(session_id: str, sender: str, user_msg: str, bot_reply: str):
+    try:
+        save_session(session_id, sender, "Telegram")
+        append_session_transcript(session_id, user_msg, bot_reply)
     except Exception:
-        pass  # don't break the webhook on session save failure
+        pass  # never break the webhook on session save failure
 
 
+# ---------------------------------------------------------------------------
+# US-01 / US-02: Commands and menu
+# ---------------------------------------------------------------------------
+WELCOME_MESSAGE = (
+    "🎓 Welcome to the SDU University Help Desk!\n\n"
+    "Choose a topic:\n\n"
+    "1. Tuition Fees\n"
+    "2. Course Add/Drop\n"
+    "3. Dormitory\n"
+    "4. Transcripts\n\n"
+    "Or just ask your question in Kazakh, Russian, or English."
+)
+
+MENU_MESSAGE = (
+    "📋 SDU Help Desk Menu:\n\n"
+    "1. Tuition Fees\n"
+    "2. Course Add/Drop\n"
+    "3. Dormitory\n"
+    "4. Transcripts\n\n"
+    "Ask your question in Kazakh, Russian, or English."
+)
+
+HELP_MESSAGE = (
+    "🆘 SDU Help Desk Bot Commands:\n\n"
+    "/start - Start the bot and show welcome menu\n"
+    "/menu - Show topic menu\n"
+    "/profile - View or set your academic profile (US-08)\n"
+    "/advisor - Escalate to a human advisor (US-09)\n"
+    "/tickets - Show open support tickets (staff only, US-10)\n"
+    "/summary - Show query analytics (staff only, US-06)\n"
+    "/help - Show this help\n\n"
+    "Or just ask your question in Kazakh, Russian, or English."
+)
+
+
+def _format_dispatch_resource(r: dict) -> str:
+    mode = r.get("dispatch_mode", "link")
+    title = r.get("title", "Untitled")
+    if mode == "file":
+        return f"📄 {title} — official PDF available (file dispatch)"
+    if mode == "link":
+        return f"🔗 {title} — {r.get('url', 'URL not available')}"
+    if mode == "unavailable":
+        return f"❌ {title} — Not available for download. Please contact the SSC in Block B."
+    return f"ℹ️ {title} — {mode}"
+
+
+# ---------------------------------------------------------------------------
+# Webhook
+# ---------------------------------------------------------------------------
 @app.post("/webhook")
 async def webhook(request: Request, x_telegram_bot_api_secret_token: str | None = Header(default=None)):
     if WEBHOOK_SECRET and x_telegram_bot_api_secret_token != WEBHOOK_SECRET:
@@ -153,52 +305,32 @@ async def webhook(request: Request, x_telegram_bot_api_secret_token: str | None 
     lower = text.strip().lower()
 
     try:
-        # /start command - new session
+        # ── US-01: /start command ──
         if lower == "/start":
-            reply = (
-                "🎓 Welcome to the SDU University Help Desk!\n\n"
-                "Choose a topic:\n\n"
-                "1. Tuition Fees\n"
-                "2. Course Add/Drop\n"
-                "3. Dormitory\n"
-                "4. Transcripts\n\n"
-                "Or just ask your question in Kazakh, Russian, or English."
-            )
-            _send_message(chat_id, reply)
-            _save_session(session_id, sender, "Telegram", "/start", reply)
+            result = _send_message(chat_id, WELCOME_MESSAGE)
+            if not result["success"]:
+                print(f"SEND_FAILED: {result['error']}")
+            _save_session_transcript(session_id, sender, "/start", WELCOME_MESSAGE)
             log_query(now, "System", "English", "answered", "User started bot with /start")
             return Response(status_code=200)
 
-        # /menu command
+        # ── US-02: /menu command ──
         if lower == "/menu":
-            reply = (
-                "📋 SDU Help Desk Menu:\n\n"
-                "1. Tuition Fees\n"
-                "2. Course Add/Drop\n"
-                "3. Dormitory\n"
-                "4. Transcripts\n\n"
-                "Ask your question in Kazakh, Russian, or English."
-            )
-            _send_message(chat_id, reply)
-            _save_session(session_id, sender, "Telegram", "/menu", reply)
+            result = _send_message(chat_id, MENU_MESSAGE)
+            if not result["success"]:
+                print(f"SEND_FAILED: {result['error']}")
+            _save_session_transcript(session_id, sender, "/menu", MENU_MESSAGE)
             return Response(status_code=200)
 
-        # /help command
+        # ── US-01: /help command ──
         if lower == "/help":
-            reply = (
-                "🆘 SDU Help Desk Bot Commands:\n\n"
-                "/start - Start the bot and show welcome menu\n"
-                "/menu - Show topic menu\n"
-                "/profile - View or set your academic profile\n"
-                "/advisor - Escalate to a human advisor\n"
-                "/help - Show this help\n\n"
-                "Or just ask your question in Kazakh, Russian, or English."
-            )
-            _send_message(chat_id, reply)
-            _save_session(session_id, sender, "Telegram", "/help", reply)
+            result = _send_message(chat_id, HELP_MESSAGE)
+            if not result["success"]:
+                print(f"SEND_FAILED: {result['error']}")
+            _save_session_transcript(session_id, sender, "/help", HELP_MESSAGE)
             return Response(status_code=200)
 
-        # /profile command
+        # ── US-08: /profile command ──
         if lower == "/profile":
             prof = get_profile(chat_id)
             if prof:
@@ -215,11 +347,154 @@ async def webhook(request: Request, x_telegram_bot_api_secret_token: str | None 
                     "No academic profile set yet.\n\n"
                     "Tell me your degree, major, and year (e.g. 'I am a 2nd year Bachelor Computer Science student')."
                 )
-            _send_message(chat_id, reply)
-            _save_session(session_id, sender, "Telegram", "/profile", reply)
+            result = _send_message(chat_id, reply)
+            if not result["success"]:
+                print(f"SEND_FAILED: {result['error']}")
+            _save_session_transcript(session_id, sender, "/profile", reply)
             return Response(status_code=200)
 
-        # Profile setting (natural language)
+        # ── US-09: /advisor command ──
+        if lower == "/advisor" or lower in ("advisor", "ticket", "human", "escalate"):
+            ticket_id = f"T-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}-{chat_id[-4:]}"
+            create_ticket(ticket_id, chat_id, sender, text, now, session_id)
+            notify = (
+                "🚨 New Escalation Ticket:\n\n"
+                f"Student: {sender} (ID: {chat_id})\n"
+                f"Request: '{text}'\n\n"
+                f"Staff Actions:\n"
+                f"1. Use /tickets to view open tickets\n"
+                f"2. Resolve ticket for {ticket_id}\n"
+            )
+            if STAFF_GROUP_CHAT_ID:
+                _send_message(STAFF_GROUP_CHAT_ID, notify)
+            reply = "I have opened a support ticket for your request, and a human advisor will be notified shortly."
+            result = _send_message(chat_id, reply)
+            if not result["success"]:
+                print(f"SEND_FAILED: {result['error']}")
+            _save_session_transcript(session_id, sender, text, reply)
+            log_query(now, "Other / Not covered", "English", "answered", "Student requested human advisor escalation")
+            return Response(status_code=200)
+
+        # ── US-10: /tickets command (staff only) ──
+        if lower == "/tickets":
+            if STAFF_GROUP_CHAT_ID and chat_id != STAFF_GROUP_CHAT_ID:
+                _send_message(chat_id, "🔒 Access Restricted: This command is only available inside the authorized staff group.")
+                return Response(status_code=200)
+            tickets = list_open_tickets()
+            lines = ["📋 Open support tickets:"]
+            if not tickets:
+                lines.append("None.")
+            else:
+                for t in tickets:
+                    lines.append(f"• {t['ticket_id']}: {t['sender']} — {t['context'][:80]}")
+            reply = "\n".join(lines)
+            result = _send_message(chat_id, reply)
+            if not result["success"]:
+                print(f"SEND_FAILED: {result['error']}")
+            _save_session_transcript(session_id, sender, "/tickets", reply)
+            return Response(status_code=200)
+
+        # ── US-06: /summary command (staff only) ──
+        if lower == "/summary":
+            if STAFF_GROUP_CHAT_ID and chat_id != STAFF_GROUP_CHAT_ID:
+                _send_message(chat_id, "🔒 Access Restricted: This command is only available inside the authorized staff group.")
+                return Response(status_code=200)
+            reply = await answer("Show me the executive summary of student questions (answered vs not covered, by category and language).", NVIDIA_API_KEY)
+            result = _send_message(chat_id, reply)
+            if not result["success"]:
+                print(f"SEND_FAILED: {result['error']}")
+            _save_session_transcript(session_id, sender, "/summary", reply)
+            log_query(now, "Campus Services", "English", "answered", "Staff requested executive summary")
+            return Response(status_code=200)
+
+        # ── US-04: Document dispatch commands ──
+        # Handle requests for specific documents like "send me the campus map"
+        doc_keywords = {
+            "campus map": "campus_map_image",
+            "tuition regulation": "tuition_fees_regulation_pdf",
+            "tuition fees regulation": "tuition_fees_regulation_pdf",
+            "academic calendar": "academic_calendar",
+            "dormitory boys": "dormitory_boys_house",
+            "dormitory girls": "dormitory_girls_house",
+            "student service center": "student_service_center_services",
+            "petition forms": "petition_forms",
+            "campus wifi": "campus_wifi_info",
+            "academic regulations": "academic_regulations_all",
+        }
+
+        doc_requested = None
+        for keyword, resource_id in doc_keywords.items():
+            if keyword in lower:
+                doc_requested = resource_id
+                break
+
+        if doc_requested:
+            resource = get_dispatch_resource(doc_requested)
+            if not resource:
+                reply = "❌ I couldn't find that document. Please contact the SSC in Block B."
+                result = _send_message(chat_id, reply)
+                if not result["success"]:
+                    print(f"SEND_FAILED: {result['error']}")
+                _save_session_transcript(session_id, sender, text, reply)
+                return Response(status_code=200)
+
+            mode = resource.get("dispatch_mode", "link")
+
+            if mode == "unavailable":
+                reply = (
+                    f"❌ {resource.get('title', 'Document')} is not available for download.\n\n"
+                    f"Reason: {resource.get('reason', 'No reason provided.')}\n\n"
+                    f"Please contact the SSC in Block B for assistance."
+                )
+                result = _send_message(chat_id, reply)
+                if not result["success"]:
+                    print(f"SEND_FAILED: {result['error']}")
+                _save_session_transcript(session_id, sender, text, reply)
+                return Response(status_code=200)
+
+            if mode == "link":
+                url = resource.get("url", "")
+                reply = (
+                    f"🔗 {resource.get('title', 'Document')}\n\n"
+                    f"Link: {url}\n\n"
+                    f"This is the official source. Please visit the link for the full document."
+                )
+                result = _send_message(chat_id, reply)
+                if not result["success"]:
+                    print(f"SEND_FAILED: {result['error']}")
+                _save_session_transcript(session_id, sender, text, reply)
+                return Response(status_code=200)
+
+            if mode == "file":
+                file_path = resource.get("file", "")
+                if not file_path:
+                    reply = f"❌ File path not configured for {resource.get('title', 'Document')}."
+                    result = _send_message(chat_id, reply)
+                    if not result["success"]:
+                        print(f"SEND_FAILED: {result['error']}")
+                    _save_session_transcript(session_id, sender, text, reply)
+                    return Response(status_code=200)
+
+                # Resolve relative path
+                base_dir = os.path.dirname(os.path.abspath(__file__))
+                abs_path = os.path.join(base_dir, file_path)
+
+                if file_path.lower().endswith((".jpg", ".jpeg", ".png", ".gif", ".webp")):
+                    result = _send_photo(chat_id, abs_path)
+                else:
+                    result = _send_document(chat_id, abs_path)
+
+                if not result["success"]:
+                    reply = f"❌ Failed to send {resource.get('title', 'Document')}. Error: {result['error']}"
+                    _send_message(chat_id, reply)
+                else:
+                    reply = f"📎 Here is your document: {resource.get('title', 'Document')}"
+                    _send_message(chat_id, reply)
+
+                _save_session_transcript(session_id, sender, text, reply if result["success"] else f"Document dispatch failed: {result.get('error', 'unknown')}")
+                return Response(status_code=200)
+
+        # ── US-08: Profile setting from natural language ──
         if any(kw in lower for kw in ["i am a", "i'm a", "my degree", "student year"]) and any(
             kw in lower for kw in ["bachelor", "master", "phd", "year", "student"]
         ):
@@ -228,54 +503,19 @@ async def webhook(request: Request, x_telegram_bot_api_secret_token: str | None 
                 "✅ Profile updated!\n\n"
                 "I've saved your academic information. Use /profile to view it anytime."
             )
-            _send_message(chat_id, reply)
-            _save_session(session_id, sender, "Telegram", text, reply)
+            result = _send_message(chat_id, reply)
+            if not result["success"]:
+                print(f"SEND_FAILED: {result['error']}")
+            _save_session_transcript(session_id, sender, text, reply)
             return Response(status_code=200)
 
-        # Staff advisor analytics
-        if lower in ("summary", "stat", "stats", "отчет", "статистика"):
-            if chat_id != STAFF_GROUP_CHAT_ID:
-                _send_message(chat_id, "🔒 Access Restricted: This advisor command is only available inside the authorized staff group.")
-                return Response(status_code=200)
-            docs = find_relevant_docs("query summary analytics")
-            reply = await answer("Show me the executive summary of student questions.", NVIDIA_API_KEY)
-            _send_message(chat_id, reply)
-            return Response(status_code=200)
-
-        if lower in ("sessions", "сессии", "логи", "logs"):
-            if chat_id != STAFF_GROUP_CHAT_ID:
-                _send_message(chat_id, "🔒 Access Restricted: Session logs are only available inside the authorized staff group.")
-                return Response(status_code=200)
-            _send_message(chat_id, "📋 Open support tickets:\n\nNone.")
-            return Response(status_code=200)
-
-        # Escalation / ticket
-        if "advisor" in lower or "ticket" in lower or "human" in lower or lower == "/advisor":
-            ticket_id = f"T-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}-{chat_id[-4:]}"
-            create_ticket(ticket_id, chat_id, sender, text, now, session_id)
-            notify = (
-                "New Escalation Ticket:\n\n"
-                f"Student: {sender} (ID: {chat_id})\n"
-                f"Request: '{text}'\n\n"
-                f"Staff Actions:\n"
-                f"1. 'Show open tickets'\n"
-                f"2. 'Resolve ticket for {ticket_id} with [message]'\n"
-            )
-            if STAFF_GROUP_CHAT_ID:
-                _send_message(STAFF_GROUP_CHAT_ID, notify)
-            reply = "I have opened a support ticket for your request, and a human advisor will be notified shortly."
-            _send_message(chat_id, reply)
-            _save_session(session_id, sender, "Telegram", text, reply)
-            log_query(now, "Other / Not covered", "English", "answered", "Student requested human advisor escalation")
-            return Response(status_code=200)
-
-        # Normal Q&A path — grounded LLM answer
+        # ── US-03 / US-05: Normal Q&A path — grounded LLM answer ──
         kb_docs = find_relevant_docs(text)
         reply = await answer(text, NVIDIA_API_KEY)
         result = _send_message(chat_id, reply)
         if not result["success"]:
             print(f"SEND_FAILED: {result['error']}")
-        _save_session(session_id, sender, "Telegram", text, reply)
+        _save_session_transcript(session_id, sender, text, reply)
         category = kb_docs[0].category if kb_docs else "Other / Not covered"
         log_query(now, category, "English", "answered" if kb_docs else "not covered", text[:160])
         return Response(status_code=200)

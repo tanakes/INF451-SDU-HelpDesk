@@ -1,8 +1,16 @@
 .env
-__pycache__/
-*.pyc
 .env.local
 *.log
 .venv/
 venv/
 .DS_Store
+__pycache__/
+*.pyc
+
+# Telegram session and credentials — never commit
+telegram_session.session
+telegram_session.session-journal
+.telegram_session*
+
+# Environment variables with API credentials
+.env

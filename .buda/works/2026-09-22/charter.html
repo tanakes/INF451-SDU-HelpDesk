@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SDU AI Help Desk — Project Charter</title>
+<style>
+  @page {
+    size: A4;
+    margin: 2.2cm 1.9cm 2cm 1.9cm;
+    @bottom-center {
+      content: "SDU AI University Help Desk — Project Charter";
+      font-size: 8.5px;
+      color: #7c8794;
+      font-family: 'DejaVu Sans', sans-serif;
+    }
+    @bottom-right {
+      content: counter(page);
+      font-size: 8.5px;
+      color: #7c8794;
+      font-family: 'DejaVu Sans', sans-serif;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'DejaVu Sans', Arial, sans-serif;
+    color: #1c2430;
+    font-size: 10.3px;
+    line-height: 1.5;
+  }
+  h1, h2, h3 { font-family: 'DejaVu Serif', Georgia, serif; color: #0b2545; margin: 0; }
+  h1 { font-size: 25px; }
+  h2 {
+    font-size: 15px;
+    border-bottom: 1.6px solid #0b2545;
+    padding-bottom: 5px;
+    margin-top: 22px;
+    margin-bottom: 10px;
+    page-break-after: avoid;
+  }
+  h3 {
+    font-size: 12px;
+    color: #007575;
+    margin-top: 14px;
+    margin-bottom: 6px;
+    page-break-after: avoid;
+  }
+  p { margin: 4px 0 8px 0; }
+  ul, ol { margin: 4px 0 8px 20px; padding: 0; }
+  li { margin-bottom: 3px; }
+  .cover { text-align: left; padding-top: 5.5cm; }
+  .cover .kicker { font-size: 11px; letter-spacing: 2px; color: #00A8A8; font-weight: bold; margin-bottom: 10px; }
+  .cover .subtitle { font-size: 13px; color: #445069; margin-top: 10px; }
+  .cover table.meta { margin-top: 40px; font-size: 10.5px; border-collapse: collapse; }
+  .cover table.meta td { padding: 4px 14px 4px 0; color: #445069; }
+  .cover table.meta td.label { font-weight: bold; color: #0b2545; white-space: nowrap; }
+  .cover .link-box { margin-top: 46px; padding: 12px 16px; border: 1px solid #d8e1ee; border-left: 3px solid #00A8A8; background: #f4f7fb; font-size: 9.7px; }
+  .cover .link-box .lbl { font-weight: bold; color: #0b2545; display: block; margin-bottom: 3px; }
+  .cover .link-box a { color: #007575; word-break: break-all; }
+  table.data { width: 100%; border-collapse: collapse; margin: 8px 0 14px 0; font-size: 9.6px; }
+  table.data th { background: #0b2545; color: #fff; text-align: left; padding: 5px 7px; font-weight: bold; }
+  table.data td { padding: 5px 7px; border-bottom: 1px solid #e3e9f1; vertical-align: top; }
+  table.data tr:nth-child(even) td { background: #f8fafc; }
+  .pass { color: #1E8E5A; font-weight: bold; }
+  .risk-high { color: #b23b3b; font-weight: bold; }
+  .risk-med { color: #C97A1F; font-weight: bold; }
+  .risk-low { color: #1E8E5A; font-weight: bold; }
+  .quote { border-left: 3px solid #00A8A8; background: #f4f7fb; padding: 8px 12px; font-style: italic; color: #33415c; margin: 8px 0 12px 0; font-size: 10px; }
+  code, .code { font-family: 'DejaVu Sans Mono', monospace; font-size: 9px; background: #eef2f8; padding: 1px 4px; border-radius: 2px; color: #0b2545; }
+  .section-break { page-break-before: always; }
+  .box { border: 1px solid #d8e1ee; border-radius: 4px; padding: 9px 12px; margin-bottom: 10px; }
+  .box .box-title { font-weight: bold; color: #0b2545; font-size: 10.5px; margin-bottom: 5px; }
+  .tag { display: inline-block; background: #0b2545; color: #fff; font-size: 8.5px; padding: 2px 7px; border-radius: 10px; margin-right: 5px; }
+  .small-note { font-size: 9px; color: #6b7688; }
+  .toc-list { list-style: none; margin-left: 0; }
+  .toc-list li { margin-bottom: 6px; }
+  .toc-list a { color: #1c2430; text-decoration: none; }
+  .toc-num { color: #00A8A8; font-weight: bold; margin-right: 6px; }
+  .sig-table { width: 100%; border-collapse: collapse; margin-top: 30px; }
+  .sig-table td { border-top: 1px solid #1c2430; padding-top: 4px; font-size: 9.5px; color: #445069; width: 50%; }
+  .sig-row-space td { height: 45px; border-top: none; }
+</style>
+</head>
+<body>
+
+<!-- COVER -->
+<div class="cover">
+  <div class="kicker">PROJECT CHARTER</div>
+  <h1>AI University Help Desk<br>&amp; Virtual Assistant</h1>
+  <div class="subtitle">Project Number 3 — SDU University<br>
+  Telegram-Based AI Help Desk for Academic Information &amp; Student Support</div>
+
+  <table class="meta">
+    <tr><td class="label">Project Title</td><td>AI University Help Desk and Virtual Assistant</td></tr>
+    <tr><td class="label">Project Number</td><td>3</td></tr>
+    <tr><td class="label">Platform</td><td>Buda.im Agentic Platform (Telegram Channel)</td></tr>
+    <tr><td class="label">Duration</td><td>7 Sprints (Sprint 1 – Sprint 7)</td></tr>
+    <tr><td class="label">Team Size</td><td>5 members</td></tr>
+    <tr><td class="label">Document Status</td><td>Approved for execution — Sprint 1 in progress</td></tr>
+  </table>
+
+  <div class="link-box">
+    <span class="lbl">Progress Sheet — User Stories, QA Tests &amp; Sprint Tracking</span>
+    <a href="https://docs.google.com/spreadsheets/d/1t1zm4GLZOaNZUwZuRNERl3t_-CYRkRwVVxfXbAob4Ns/edit?gid=1748034197#gid=1748034197">
+    https://docs.google.com/spreadsheets/d/1t1zm4GLZOaNZUwZuRNERl3t_-CYRkRwVVxfXbAob4Ns/edit?gid=1748034197#gid=1748034197</a>
+  </div>
+</div>
+
+<!-- TOC -->
+<div class="section-break">
+<h2>Table of Contents</h2>
+<ul class="toc-list">
+  <li><span class="toc-num">1.</span> Project Purpose &amp; Justification</li>
+  <li><span class="toc-num">2.</span> Project Objectives &amp; Success Criteria</li>
+  <li><span class="toc-num">3.</span> Scope</li>
+  <li><span class="toc-num">4.</span> Stakeholders &amp; Roles</li>
+  <li><span class="toc-num">5.</span> Project Team &amp; Responsibilities</li>
+  <li><span class="toc-num">6.</span> Sprint Plan &amp; Milestones</li>
+  <li><span class="toc-num">7.</span> Deliverables by Sprint</li>
+  <li><span class="toc-num">8.</span> Assumptions &amp; Constraints</li>
+  <li><span class="toc-num">9.</span> Risks &amp; Mitigation</li>
+  <li><span class="toc-num">10.</span> Governance &amp; Approval</li>
+  <li><span class="toc-num">11.</span> References</li>
+</ul>
+</div>
+
+<!-- SECTION 1 -->
+<div class="section-break">
+<h2>1. Project Purpose &amp; Justification</h2>
+<p>SDU students currently rely on manual inquiries to university staff for routine academic information —
+tuition deadlines, course registration windows, dormitory procedures, and transcript requests. This creates
+repetitive administrative workload for staff and delays for students seeking simple, factual answers.</p>
+
+<div class="quote">
+Project Goal: To develop an AI University Help Desk and Virtual Assistant as a Telegram-based helpdesk bot
+that provides SDU university students with instant access to academic information, university services, and
+administrative support in Kazakh, Russian, and English. The bot aims to reduce student dependency on manual
+inquiries to university staff by offering AI-powered responses to frequently asked questions, automated
+deadline reminders, and seamless escalation to human advisors when needed, ultimately improving the overall
+student experience and reducing administrative workload.
+</div>
+
+<p>The project addresses this by building an AI agent, accessible through Telegram (the messaging app students
+already use daily), that answers common questions instantly, escalates complex cases to human advisors, and
+gives university staff a maintainable knowledge base and analytics layer.</p>
+</div>
+
+<!-- SECTION 2 -->
+<div class="section-break">
+<h2>2. Project Objectives &amp; Success Criteria</h2>
+<h3>2.1 Objectives</h3>
+<ul>
+  <li>Provide students with 24/7 conversational access to academic information via Telegram, without requiring a separate app or portal login.</li>
+  <li>Ground every AI response in verified, official SDU documents to eliminate hallucinated or outdated information.</li>
+  <li>Reduce the volume of routine inquiries handled manually by university advisors.</li>
+  <li>Support Kazakh, Russian, and English so the bot serves the full student population (multilingual support planned for Sprint 3).</li>
+  <li>Provide advisors with tools to maintain the knowledge base, review escalations, and monitor inquiry trends without needing to modify code.</li>
+</ul>
+
+<h3>2.2 Success Criteria</h3>
+<table class="data">
+<tr><th>Criterion</th><th>Target</th></tr>
+<tr><td>Telegram channel availability</td><td>Bot connected and responsive 24/7 via Buda's native Telegram Channel Gateway (US-01)</td></tr>
+<tr><td>Topic menu accuracy</td><td>All 4 core Sprint 1 topics (Tuition, Add/Drop, Dormitory, Transcripts) resolve correctly via menu and keyword shortcuts (US-02)</td></tr>
+<tr><td>Answer grounding</td><td>100% of answers sourced from official SDU documents; zero hallucinated facts (US-03)</td></tr>
+<tr><td>Document delivery accuracy</td><td>Official links/PDFs match the exact resource requested, with no unofficial sources served (US-04)</td></tr>
+<tr><td>QA pass rate</td><td>All Given/When/Then acceptance scenarios per sprint verified as Pass or explicitly Deferred with justification</td></tr>
+<tr><td>Escalation reliability</td><td>Unresolvable queries create a trackable advisor ticket rather than a dead end (US-09, US-10)</td></tr>
+</table>
+</div>
+
+<!-- SECTION 3 -->
+<div class="section-break">
+<h2>3. Scope</h2>
+<h3>3.1 In Scope</h3>
+<ul>
+  <li>A Telegram bot channel built on Buda's native Channel Gateway (no self-hosted server).</li>
+  <li>A structured 4-topic FAQ menu with quick keyword shortcuts (Tuition Fees, Course Add/Drop, Dormitory, Transcripts).</li>
+  <li>A university knowledge base of official SDU documents grounding all bot answers.</li>
+  <li>Direct delivery of official links and PDF guides (academic calendars, petition forms) inside the Telegram chat.</li>
+  <li>Multilingual understanding in Kazakh, Russian, and English, including typo/colloquial tolerance.</li>
+  <li>Automatic classification of incoming questions into tracked categories.</li>
+  <li>Role-based access control separating Student and Advisor capabilities.</li>
+  <li>Student profile context (major, year of study) for tailored answers.</li>
+  <li>Escalation workflow to human advisors with ticket tracking.</li>
+  <li>Advisor-facing knowledge base maintenance tools and student feedback/rating collection.</li>
+  <li>Scheduled deadline reminders and analytics/reporting for administration.</li>
+</ul>
+
+<h3>3.2 Out of Scope</h3>
+<ul>
+  <li>A standalone web or mobile application — Sprint 1–7 scope is Telegram-only (a web version is logged only as a future enhancement idea).</li>
+  <li>Automated processing of payments, enrollment, or any transactional university system changes.</li>
+  <li>Any storage or handling of student passwords, IIN, or bank card details.</li>
+  <li>Unverified or non-official information sources in the knowledge base.</li>
+</ul>
+</div>
+
+<!-- SECTION 4 -->
+<div class="section-break">
+<h2>4. Stakeholders &amp; Roles</h2>
+<table class="data">
+<tr><th>Role</th><th>Description</th></tr>
+<tr><td>Student</td><td>Primary user who interacts with the bot to find academic information, receive deadline reminders, submit inquiries, and rate responses.</td></tr>
+<tr><td>Advisor</td><td>University staff member who manages the knowledge base, reviews escalated tickets, monitors inquiry trends, and generates reports.</td></tr>
+</table>
+<p class="small-note">Both roles are defined per the canonical Project Description document; all Sprint 1–7 user stories are written from the perspective of one of these two roles.</p>
+</div>
+
+<!-- SECTION 5 -->
+<div class="section-break">
+<h2>5. Project Team &amp; Responsibilities</h2>
+<table class="data">
+<tr><th>Team Member</th><th>Primary User Stories</th><th>Sprint(s)</th></tr>
+<tr><td>Berdikul Ali</td><td>US-01 (Telegram Bot Channel Integration), US-06 (Automatic Query Classification), US-10 (Advisor Ticket Queue &amp; Logs)</td><td>1, 3, 5</td></tr>
+<tr><td>Zhakhan Amina</td><td>US-02 (Interactive Topic Menu &amp; Quick Triggers), US-05 (Multilingual NLP Understanding), US-12 (Student Feedback &amp; Rating)</td><td>1, 3, 6</td></tr>
+<tr><td>Ibrayeva Altynay</td><td>US-03 (University Knowledge Base Setup), US-09 (Human Advisor Escalation)</td><td>2, 5</td></tr>
+<tr><td>Bigali Assanali</td><td>US-04 (Document &amp; Guide Dispatch), US-08 (Student Profile Context), US-13 (Scheduled Deadline Reminders)</td><td>2, 4, 7</td></tr>
+<tr><td>Oraz Nuray</td><td>US-07 (Advisor Authorization &amp; RBAC Controls), US-11 (Knowledge Base Maintenance), US-14 (Help Desk Analytics &amp; Reports)</td><td>4, 6, 7</td></tr>
+</table>
+</div>
+
+<!-- SECTION 6 -->
+<div class="section-break">
+<h2>6. Sprint Plan &amp; Milestones</h2>
+<table class="data">
+<tr><th>Sprint</th><th>Main Objective</th><th>User Stories</th></tr>
+<tr><td>Sprint 1</td><td>Establish the Telegram bot infrastructure with basic functionality and user-friendly navigation.</td><td>US-01, US-02</td></tr>
+<tr><td>Sprint 2</td><td>Build the university knowledge base and enable document retrieval functionality.</td><td>US-03, US-04</td></tr>
+<tr><td>Sprint 3</td><td>Implement multilingual NLP capabilities and automatic query categorization.</td><td>US-05, US-06</td></tr>
+<tr><td>Sprint 4</td><td>Implement role-based access control and student profile personalization.</td><td>US-07, US-08</td></tr>
+<tr><td>Sprint 5</td><td>Enable seamless escalation to human advisors and ticket tracking.</td><td>US-09, US-10</td></tr>
+<tr><td>Sprint 6</td><td>Enable advisor-driven content management and student feedback collection.</td><td>US-11, US-12</td></tr>
+<tr><td>Sprint 7</td><td>Implement automated reminders, generate analytics reports, and finalize the product.</td><td>US-13, US-14</td></tr>
+</table>
+
+<h3>6.1 Full User Story Backlog</h3>
+<table class="data">
+<tr><th>ID</th><th>Story Name</th><th>Prerequisites</th><th>Est.</th><th>Priority</th><th>Sprint</th><th>Assignee</th></tr>
+<tr><td>US-01</td><td>Telegram Bot Channel Integration</td><td>None</td><td>3/10</td><td>High</td><td>1</td><td>Berdikul Ali</td></tr>
+<tr><td>US-02</td><td>Interactive Topic Menu &amp; Quick Triggers</td><td>US-01</td><td>3/10</td><td>High</td><td>1</td><td>Zhakhan Amina</td></tr>
+<tr><td>US-03</td><td>University Knowledge Base Setup</td><td>US-01</td><td>4/10</td><td>High</td><td>2</td><td>Ibrayeva Altynay</td></tr>
+<tr><td>US-04</td><td>Document &amp; Guide Dispatch</td><td>US-03</td><td>3/10</td><td>Medium</td><td>2</td><td>Bigali Assanali</td></tr>
+<tr><td>US-05</td><td>Multilingual NLP Understanding</td><td>US-03</td><td>6/10</td><td>High</td><td>3</td><td>Zhakhan Amina</td></tr>
+<tr><td>US-06</td><td>Automatic Query Classification</td><td>US-03</td><td>4/10</td><td>High</td><td>3</td><td>Berdikul Ali</td></tr>
+<tr><td>US-07</td><td>Advisor Authorization &amp; RBAC Controls</td><td>US-01</td><td>4/10</td><td>High</td><td>4</td><td>Oraz Nuray</td></tr>
+<tr><td>US-08</td><td>Student Profile Context</td><td>US-01</td><td>3/10</td><td>Medium</td><td>4</td><td>Bigali Assanali</td></tr>
+<tr><td>US-09</td><td>Human Advisor Escalation</td><td>US-03, US-07</td><td>6/10</td><td>High</td><td>5</td><td>Ibrayeva Altynay</td></tr>
+<tr><td>US-10</td><td>Advisor Ticket Queue &amp; Logs</td><td>US-07, US-09</td><td>5/10</td><td>High</td><td>5</td><td>Berdikul Ali</td></tr>
+<tr><td>US-11</td><td>Knowledge Base Maintenance</td><td>US-03</td><td>3/10</td><td>High</td><td>6</td><td>Oraz Nuray</td></tr>
+<tr><td>US-12</td><td>Student Feedback &amp; Rating</td><td>US-01</td><td>2/10</td><td>Medium</td><td>6</td><td>Zhakhan Amina</td></tr>
+<tr><td>US-13</td><td>Scheduled Deadline Reminders</td><td>US-01</td><td>5/10</td><td>Medium</td><td>7</td><td>Bigali Assanali</td></tr>
+<tr><td>US-14</td><td>Help Desk Analytics &amp; Reports</td><td>US-06, US-10</td><td>5/10</td><td>Medium</td><td>7</td><td>Oraz Nuray</td></tr>
+</table>
+<p class="small-note">Estimation values follow the format effort/10. Prerequisites indicate dependency on another story's completion.</p>
+</div>

@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SDU AI Help Desk — Sprint 1 Report</title>
+<style>
+  @page {
+    size: A4;
+    margin: 2.2cm 1.9cm 2cm 1.9cm;
+    @bottom-center {
+      content: "SDU AI University Help Desk — Sprint 1 Report";
+      font-size: 8.5px;
+      color: #7c8794;
+      font-family: 'DejaVu Sans', sans-serif;
+    }
+    @bottom-right {
+      content: counter(page);
+      font-size: 8.5px;
+      color: #7c8794;
+      font-family: 'DejaVu Sans', sans-serif;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'DejaVu Sans', Arial, sans-serif;
+    color: #1c2430;
+    font-size: 10.3px;
+    line-height: 1.5;
+  }
+  h1, h2, h3 { font-family: 'DejaVu Serif', Georgia, serif; color: #0b2545; margin: 0; }
+  h1 { font-size: 25px; }
+  h2 {
+    font-size: 15px;
+    border-bottom: 1.6px solid #0b2545;
+    padding-bottom: 5px;
+    margin-top: 22px;
+    margin-bottom: 10px;
+    page-break-after: avoid;
+  }
+  h3 {
+    font-size: 12px;
+    color: #007575;
+    margin-top: 14px;
+    margin-bottom: 6px;
+    page-break-after: avoid;
+  }
+  p { margin: 4px 0 8px 0; }
+  ul, ol { margin: 4px 0 8px 20px; padding: 0; }
+  li { margin-bottom: 3px; }
+  .cover {
+    text-align: left;
+    padding-top: 5.5cm;
+  }
+  .cover .kicker {
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: #00A8A8;
+    font-weight: bold;
+    margin-bottom: 10px;
+  }
+  .cover .subtitle {
+    font-size: 13px;
+    color: #445069;
+    margin-top: 10px;
+  }
+  .cover table.meta {
+    margin-top: 40px;
+    font-size: 10.5px;
+    border-collapse: collapse;
+  }
+  .cover table.meta td {
+    padding: 4px 14px 4px 0;
+    color: #445069;
+  }
+  .cover table.meta td.label {
+    font-weight: bold;
+    color: #0b2545;
+    white-space: nowrap;
+  }
+  .cover .link-box {
+    margin-top: 46px;
+    padding: 12px 16px;
+    border: 1px solid #d8e1ee;
+    border-left: 3px solid #00A8A8;
+    background: #f4f7fb;
+    font-size: 9.7px;
+  }
+  .cover .link-box .lbl {
+    font-weight: bold;
+    color: #0b2545;
+    display: block;
+    margin-bottom: 3px;
+  }
+  .cover .link-box a { color: #007575; word-break: break-all; }
+  table.data {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 8px 0 14px 0;
+    font-size: 9.6px;
+  }
+  table.data th {
+    background: #0b2545;
+    color: #fff;
+    text-align: left;
+    padding: 5px 7px;
+    font-weight: bold;
+  }
+  table.data td {
+    padding: 5px 7px;
+    border-bottom: 1px solid #e3e9f1;
+    vertical-align: top;
+  }
+  table.data tr:nth-child(even) td { background: #f8fafc; }
+  .pass { color: #1E8E5A; font-weight: bold; }
+  .fail { color: #b23b3b; font-weight: bold; }
+  .deferred { color: #C97A1F; font-weight: bold; }
+  .quote {
+    border-left: 3px solid #00A8A8;
+    background: #f4f7fb;
+    padding: 8px 12px;
+    font-style: italic;
+    color: #33415c;
+    margin: 8px 0 12px 0;
+    font-size: 10px;
+  }
+  code, .code {
+    font-family: 'DejaVu Sans Mono', monospace;
+    font-size: 9px;
+    background: #eef2f8;
+    padding: 1px 4px;
+    border-radius: 2px;
+    color: #0b2545;
+  }
+  .code-block {
+    font-family: 'DejaVu Sans Mono', monospace;
+    font-size: 8.6px;
+    background: #f4f7fb;
+    border: 1px solid #d8e1ee;
+    border-radius: 3px;
+    padding: 8px 10px;
+    white-space: pre-wrap;
+    color: #1c2430;
+    margin: 6px 0 12px 0;
+  }
+  .section-break { page-break-before: always; }
+  .two-col {
+    display: flex;
+    gap: 16px;
+  }
+  .two-col > div { flex: 1; }
+  .box {
+    border: 1px solid #d8e1ee;
+    border-radius: 4px;
+    padding: 9px 12px;
+    margin-bottom: 10px;
+  }
+  .box .box-title {
+    font-weight: bold;
+    color: #0b2545;
+    font-size: 10.5px;
+    margin-bottom: 5px;
+  }
+  .tag {
+    display: inline-block;
+    background: #0b2545;
+    color: #fff;
+    font-size: 8.5px;
+    padding: 2px 7px;
+    border-radius: 10px;
+    margin-right: 5px;
+  }
+  .small-note { font-size: 9px; color: #6b7688; }
+  .toc-list { list-style: none; margin-left: 0; }
+  .toc-list li { margin-bottom: 6px; }
+  .toc-list a { color: #1c2430; text-decoration: none; }
+  .toc-num { color: #00A8A8; font-weight: bold; margin-right: 6px; }
+</style>
+</head>
+<body>
+
+<!-- COVER PAGE -->
+<div class="cover">
+  <div class="kicker">SPRINT 1 PROJECT REPORT</div>
+  <h1>SDU AI University Help Desk<br>&amp; Virtual Assistant</h1>
+  <div class="subtitle">Software Architecture, UI/UX, Database Structure &amp; QA Test Report<br>
+  Covering User Stories US-01 (Telegram Bot Channel Integration) &amp; US-02 (Interactive Topic Menu &amp; Quick Triggers)</div>
+
+  <table class="meta">
+    <tr><td class="label">Project</td><td>AI University Help Desk Virtual Assistant — Topic 3</td></tr>
+    <tr><td class="label">Sprint</td><td>Sprint 1</td></tr>
+    <tr><td class="label">US-01 Assignee</td><td>Berdikul Ali</td></tr>
+    <tr><td class="label">US-02 Assignee</td><td>Zhakhan Amina</td></tr>
+    <tr><td class="label">Platform</td><td>Buda.im Agentic Platform</td></tr>
+    <tr><td class="label">Channel</td><td>Telegram (native Buda Channel Gateway)</td></tr>
+  </table>
+
+  <div class="link-box">
+    <span class="lbl">Progress Sheet — User Stories, QA Tests &amp; Sprint Tracking</span>
+    <a href="https://docs.google.com/spreadsheets/d/1t1zm4GLZOaNZUwZuRNERl3t_-CYRkRwVVxfXbAob4Ns/edit?gid=1748034197#gid=1748034197">
+    https://docs.google.com/spreadsheets/d/1t1zm4GLZOaNZUwZuRNERl3t_-CYRkRwVVxfXbAob4Ns/edit?gid=1748034197#gid=1748034197</a>
+  </div>
+</div>
+
+<!-- TABLE OF CONTENTS -->
+<div class="section-break">
+<h2>Table of Contents</h2>
+<ul class="toc-list">
+  <li><span class="toc-num">1.</span> Project Overview</li>
+  <li><span class="toc-num">2.</span> Software Architecture</li>
+  <li><span class="toc-num">3.</span> UI / UX Design</li>
+  <li><span class="toc-num">4.</span> Database & Data Structure</li>
+  <li><span class="toc-num">5.</span> User Story US-01 — Telegram Bot Channel Integration</li>
+  <li><span class="toc-num">6.</span> QA Test Results — US-01</li>
+  <li><span class="toc-num">7.</span> User Story US-02 — Interactive Topic Menu & Quick Triggers</li>
+  <li><span class="toc-num">8.</span> QA Test Results — US-02</li>
+  <li><span class="toc-num">9.</span> Sprint 1 Summary & Next Steps</li>
+  <li><span class="toc-num">10.</span> References</li>
+</ul>
+</div>
+
+<!-- SECTION 1: PROJECT OVERVIEW -->
+<div class="section-break">
+<h2>1. Project Overview</h2>
+<p>The SDU AI University Help Desk &amp; Virtual Assistant is a conversational agent that helps students access
+academic information without navigating multiple university portals. In Sprint 1 the team delivered the
+foundational messaging channel and the first structured information-retrieval feature: a Telegram bot
+channel (US-01) and an interactive 4-topic FAQ menu with quick keyword triggers (US-02).</p>
+
+<table class="data">
+<tr><th>Story</th><th>Title</th><th>Assignee</th><th>Estimation</th><th>Priority</th><th>Sprint</th></tr>
+<tr><td>US-01</td><td>Telegram Bot Channel Integration</td><td>Berdikul Ali</td><td>3/10</td><td>High (LCHV)</td><td>Sprint 1</td></tr>
+<tr><td>US-02</td><td>Interactive Topic Menu &amp; Quick Triggers</td><td>Zhakhan Amina</td><td>3/10</td><td>High (LCHV)</td><td>Sprint 1</td></tr>
+</table>
+
+<p class="small-note">US-02 depends on US-01: the topic menu and keyword triggers are only reachable once the Telegram
+channel is connected.</p>
+</div>
+
+<!-- SECTION 2: SOFTWARE ARCHITECTURE -->
+<div class="section-break">
+<h2>2. Software Architecture</h2>
+<p>The system is built entirely on the <b>Buda.im agentic platform</b>, which removes the need for
+a custom backend server, webhook host, or reverse proxy. The architecture has four layers:</p>
+
+<h3>2.1 Core Runtime — Buda.im Agent Sandbox</h3>
+<div class="box">
+<div class="box-title">Cloud-based, stateful agent runtime</div>
+<ul>
+  <li>The AI agent executes inside an isolated cloud sandbox provided by Buda.</li>
+  <li>Persistent Drive storage (<code>/agent</code>) survives sandbox restarts and stores configuration, knowledge files, and session logs.</li>
+  <li>A persistent Session Memory Engine tracks multi-turn conversation context per user.</li>
+</ul>
+</div>
+
+<h3>2.2 Messaging Layer — Native Telegram Channel Gateway</h3>
+<div class="box">
+<div class="box-title">Serverless message dispatch (US-01, Constraint 1)</div>
+<ul>
+  <li>The bot is connected to Telegram using Buda's built-in Telegram Channel connector, authenticated with an official <code>@BotFather</code> API token entered directly into Buda Space Settings → Chat Channels.</li>
+  <li>Buda's cloud gateway manages webhook ingestion, message routing, and rate limiting — no VPS, Nginx reverse proxy, or SSL certificate maintenance is required.</li>
+  <li>Each Telegram <code>chat_id</code> is mapped 1-to-1 to an isolated session on persistent storage, keeping every student's conversation history separate.</li>
+</ul>
+</div>
+
+<h3>2.3 Application / Persona Layer — SOUL.md</h3>
+<div class="box">
+<div class="box-title">Behavior, tone, and output-formatting rules</div>
+<ul>
+  <li><code>SOUL.md</code> defines the assistant's identity, scope (Sprint 1: US-01 &amp; US-02 only), and tone.</li>
+  <li>Enforces silent execution — no internal reasoning or tool-call narration is ever shown to the student.</li>
+  <li>Enforces Telegram-safe output formatting: no raw Markdown headings (<code>#</code>), no broken nested asterisks, unicode bullets instead.</li>
+  <li>Defines the keyword-matching contract used by US-02 (case-insensitive, punctuation-tolerant).</li>
+</ul>
+</div>
+
+<h3>2.4 Knowledge / Data Layer — faq.json</h3>
+<div class="box">
+<div class="box-title">Decoupled Single Source of Truth (US-02, Constraint 2)</div>
+<ul>
+  <li>All verified SDU facts and their quick-trigger keyword arrays live in <code>/agent/sdu-helpdesk-bot/faq.json</code>, fully decoupled from the prompt code.</li>
+  <li>Updating a topic's facts or its keyword list changes the bot's behavior immediately — no redeployment needed.</li>
+</ul>
+</div>
+
+<h3>2.5 High-Level Data Flow</h3>
+<div class="code-block">Student (Telegram app)
+      │  text message
+      ▼
+Buda Telegram Channel Gateway  (BotFather token auth, webhook, rate-limit)
+      │  routed message + chat_id
+      ▼
+Agent Workspace  (session lookup / creation by chat_id)
+      │  reads persona rules
+      ▼
+SOUL.md  (behavior + Telegram-safe formatting + keyword-match contract)
+      │  looks up topic / keyword
+      ▼
+faq.json  (Single Source of Truth: 4 topics, keywords, summaries, FAQ entries)
+      │  formatted answer
+      ▼
+Buda Telegram Channel Gateway  →  Student's Telegram chat</div>
+</div>
+
+<!-- SECTION 3: UI/UX -->
+<div class="section-break">
+<h2>3. UI / UX Design</h2>
+<p>The interface is entirely conversational — there is no separate custom UI to build; the "interface" is the native
+Telegram chat client, kept clean and predictable through response-formatting rules defined in <code>SOUL.md</code>.</p>
+
+<h3>3.1 Interaction Model</h3>
+<ul>
+  <li><b>Greeting / menu trigger:</b> sending <code>hi</code>, <code>hello</code>, <code>start</code>, or <code>menu</code> presents the 4-topic quick menu.</li>
+  <li><b>Numbered or keyword shortcuts:</b> a student can reply with a digit (<code>1</code>–<code>4</code>) or a keyword (e.g. <code>tuition</code>, <code>dorm</code>) to jump directly to a topic.</li>
+  <li><b>Free-form questions:</b> a student can also type a specific question in natural English; the bot matches it to the closest FAQ entry rather than dumping the full topic summary.</li>
+  <li><b>Fallback:</b> unrecognized input never returns an unrelated topic — the bot responds with a polite notice and re-displays the 4-topic menu.</li>
+</ul>
+
+<h3>3.2 Formatting Rules Applied to Every Reply</h3>
+<table class="data">
+<tr><th>Rule</th><th>Reason</th></tr>
+<tr><td>No <code>#</code> / <code>##</code> Markdown headings</td><td>Telegram renders hash symbols as literal text, not headings.</td></tr>
+<tr><td>Unicode bullets (•) instead of nested asterisks (<code>* **</code>)</td><td>Nested Markdown asterisks render as broken syntax on Telegram clients.</td></tr>
+<tr><td>No raw URLs / clickable links</td><td>Direct link dispatch is deferred to Sprint 2 (US-04); office/platform names are used instead.</td></tr>
+<tr><td>Single blank line between sections</td><td>Readability on small mobile screens.</td></tr>
+<tr><td>English-only responses</td><td>Sprint 1 scope; non-English input receives a polite English notice with the menu.</td></tr>
+</table>
+
+<h3>3.3 The 4-Topic Menu (US-02 core UX artifact)</h3>
+<div class="quote">
+🎓 Welcome to SDU University Help Desk!<br>
+I am here to help you with our frequent academic inquiries and campus services.<br><br>
+📌 Quick Topic Menu:<br>
+💳 1. Tuition Fees — payment deadlines, ECTS credits, Kaspi payment<br>
+📝 2. Course Add/Drop — registration portals, dates, ECTS limits<br>
+🏢 3. Dormitory — Student House facilities, required documents, schedule<br>
+📄 4. Transcripts — requesting official transcripts<br><br>
+Type a number (1-4) or a keyword (e.g., 'tuition', 'dorm') to get information.
+</div>
+
+<h3>3.4 Privacy-by-Design UX</h3>
+<p>The assistant never asks for or logs passwords, IIN, or bank card details — sensitive-credential prompts are
+excluded from the conversation flow entirely.</p>
+</div>
+
+<!-- SECTION 4: DATABASE -->
+<div class="section-break">
+<h2>4. Database &amp; Data Structure</h2>
+<p>Sprint 1 does not use a relational database. Persistence is handled through two file-based stores on Buda's
+persistent Agent Drive: a structured JSON knowledge base and per-user session logs.</p>
+
+<h3>4.1 Knowledge Base — <code>faq.json</code></h3>
+<p>Single Source of Truth for all four Sprint 1 topics. Structure (per topic object):</p>
+<div class="code-block">{
+  "topics": {
+    "&lt;topic_key&gt;": {
+      "title": "string",              // e.g. "Tuition Fees"
+      "number": "integer",            // menu shortcut number (1-4)
+      "keywords": ["array of strings"], // case-insensitive trigger matches
+      "source_url": "string",         // verified sdu.edu.kz source
+      "summary": "string",            // topic overview shown on shortcut match
+      "faq": [
+        { "question": "string", "answer": "string" }
+      ]
+    }
+  }
+}</div>
+<p>Four topic keys are defined: <code>tuition</code>, <code>registration</code>, <code>dormitory</code>, <code>transcripts</code> —
+matching the menu items Tuition Fees, Course Add/Drop, Dormitory, and Transcripts.</p>
+
+<h3>4.2 Session Storage — Agent Drive</h3>
+<ul>
+  <li>Each Telegram <code>chat_id</code> is mapped to its own session file/folder on the persistent Agent Drive.</li>
+  <li>Session files store conversation turns, enabling multi-turn context (US-01 responsibility 3 / Scenario 2).</li>
+  <li>No cross-session data mixing: one student's history is never exposed to another.</li>
+</ul>
+
+<h3>4.3 Data Integrity Rules</h3>
+<ul>
+  <li>The bot is restricted to reading only <code>faq.json</code> — no fallback file scanning or recovery attempts on missing/corrupted data.</li>
+  <li>If <code>faq.json</code> is inaccessible or retrieval fails, a fixed safe-error notice is returned instead of crashing or hanging (verified in US-02-QA Scenario 6).</li>
+</ul>
+</div>
+
+<!-- SECTION 5: US-01 -->
+<div class="section-break">
+<h2>5. User Story US-01 — Telegram Bot Channel Integration</h2>
+<div class="quote">
+"As a Student, I want to interact with the university help desk via a Telegram bot, so that I can easily access
+academic assistance anytime from my messaging app."
+</div>
+<p><span class="tag">Assignee: Berdikul Ali</span><span class="tag">Estimation 3/10</span><span class="tag">Priority High (LCHV)</span><span class="tag">Sprint 1</span></p>
+
+<div class="two-col">
+<div>
+<h3>Responsibilities</h3>
+<ul>
+  <li>Connect the AI Help Desk agent to Telegram using Buda's native Telegram Channel connector with BotFather API credentials.</li>
+  <li>Receive incoming text messages from students in Telegram, route them to the agent workspace, and return AI-generated responses back to the student's chat.</li>
+  <li>Maintain chat session continuity for individual Telegram user IDs across conversations.</li>
+</ul>
+</div>
+<div>
+<h3>Constraints</h3>
+<ul>
+  <li>The solution must use Buda's native Telegram Channel Gateway for message dispatch rather than hosting an external server.</li>
+  <li>The interaction must remain entirely within the native Telegram chat interface without requiring external portal authentication for general academic inquiries.</li>
+</ul>
+</div>
+</div>
+
+<h3>Maintenance Tasks</h3>
+<ul>
+  <li>Task (Verified): Set up and verify Telegram bot token via @BotFather and connect it to the Buda channel settings.</li>
+  <li>Task (Verified): Configure response formatting rules in SOUL.md to ensure messages render cleanly on Telegram.</li>
+  <li>Task (Verified): Confirm active channel connection status and verify message exchange in real Telegram chats.</li>
+</ul>
+</div>
+
+<!-- SECTION 6: US-01-QA -->
+<div class="section-break">
+<h2>6. QA Test Results — US-01</h2>
+<p>Given/When/Then acceptance scenarios, verified against the live Telegram integration.</p>
+
+<table class="data">
+<tr><th>#</th><th>Scenario</th><th>Given</th><th>When</th><th>Then</th><th>Result</th></tr>
+<tr>
+  <td>1</td><td>Student receives an AI response</td>
+  <td>Telegram bot connected with valid BotFather credentials.</td>
+  <td>Student sends a text message to the bot.</td>
+  <td>Message is routed to the agent workspace and an AI-generated response is returned in the student's chat.</td>
+  <td><span class="pass">Pass</span></td>
+</tr>
+<tr>
+  <td>2</td><td>Conversation history is preserved</td>
+  <td>Student has an existing chat session identified by their Telegram user ID.</td>
+  <td>Student sends multiple sequential messages.</td>
+  <td>Bot keeps conversation history and each response uses context from prior turns in that session.</td>
+  <td><span class="pass">Pass</span></td>
+</tr>
+<tr>
+  <td>3</td><td>Invalid token / disconnected channel blocks delivery</td>
+  <td>Telegram bot token is invalid or the channel is disconnected.</td>
+  <td>A student sends a message to the bot.</td>
+  <td>Incoming messages do not reach the agent workspace; no AI response is returned.</td>
+  <td><span class="pass">Pass</span></td>
+</tr>
+<tr>
+  <td>4</td><td>No external portal authentication needed</td>
+  <td>Student has not signed in to any external university portal.</td>
+  <td>Student asks a general academic question in Telegram.</td>
+  <td>Bot processes the question inside Telegram; no external authentication is required.</td>
+  <td><span class="pass">Pass</span></td>
+</tr>
+<tr>
+  <td>5</td><td>Response delivery during network latency</td>
+  <td>Telegram network latency delays message delivery.</td>
+  <td>Student sends a message and the bot processes the request.</td>
+  <td>Response may arrive later than the normal threshold; recorded as deferred, not failed.</td>
+  <td><span class="deferred">Deferred</span></td>
+</tr>
+</table>
+
+<h3>Rule-Oriented Acceptance Criteria</h3>
+<ul>
+  <li>The integration must use Buda's native Telegram Channel Gateway for message dispatch.</li>
+  <li>The bot must not require an external server.</li>
+  <li>Session continuity must be maintained per individual Telegram user ID.</li>
+  <li>General academic inquiries must remain inside Telegram without external portal authentication.</li>
+  <li>Responses must render cleanly on Telegram.</li>
+</ul>
+</div>
+
+<!-- SECTION 7: US-02 -->
+<div class="section-break">
+<h2>7. User Story US-02 — Interactive Topic Menu &amp; Quick Triggers</h2>
+<div class="quote">
+"As a Student, I want a structured topic menu and quick keyword shortcuts (Tuition Fees, Course Add/Drop, Dormitory,
+Transcripts), so that I can instantly access frequent information without typing lengthy questions."
+</div>
+<p><span class="tag">Assignee: Zhakhan Amina</span><span class="tag">Estimation 3/10</span><span class="tag">Priority High (LCHV)</span><span class="tag">Sprint 1</span><span class="tag">Depends on US-01</span></p>
+
+<div class="two-col">
+<div>
+<h3>Responsibilities</h3>
+<ul>
+  <li>Provide a structured topic menu and triggers for the four primary shortcuts: Tuition Fees, Course Add/Drop, Dormitory, and Transcripts.</li>
+  <li>Map quick keyword triggers and common variations to the matching university knowledge-base topic.</li>
+  <li>Return the selected topic information as a clean Telegram message without requiring a lengthy typed question.</li>
+</ul>
+</div>
+<div>
+<h3>Constraints</h3>
+<ul>
+  <li>The solution must handle menus and quick triggers inside native Telegram chat using Buda agent prompts.</li>
+  <li>Answers must be loaded from knowledge-base files, not hardcoded into the bot.</li>
+</ul>
+</div>
+</div>
+
+<h3>Maintenance Tasks</h3>
+<ul>
+  <li>Task (Verified): Configure the four quick-trigger keywords and map them to the knowledge-base topics in Buda.</li>
+  <li>Task (Verified): Define menu and shortcut response-formatting rules for Telegram.</li>
+  <li>Task (Verified): Verify each menu item and keyword returns the expected topic information in a real Telegram chat.</li>
+</ul>
+</div>
+
+<!-- SECTION 8: US-02-QA -->
+<div class="section-break">
+<h2>8. QA Test Results — US-02</h2>
+<p>Given/When/Then acceptance scenarios, verified against the live 4-topic menu and keyword-matching logic.</p>
+
+<table class="data">
+<tr><th>#</th><th>Scenario</th><th>Given</th><th>When</th><th>Then</th><th>Result</th></tr>
+<tr>
+  <td>1</td><td>Student opens the topic menu</td>
+  <td>Student has an active Telegram chat with the Buda-connected bot from US-01.</td>
+  <td>Student sends the menu keyword or starts a new conversation.</td>
+  <td>Bot displays the 4 main topic shortcuts, each routable as a text trigger.</td>
+  <td><span class="pass">Pass</span></td>
+</tr>
+<tr>
+  <td>2</td><td>Quick keyword returns the matching topic</td>
+  <td>Bot has quick triggers mapped to all four topics.</td>
+  <td>Student types one exact keyword, e.g. "Tuition Fees".</td>
+  <td>Bot returns tuition-fee information directly in the current chat, without a longer question.</td>
+  <td><span class="pass">Pass</span></td>
+</tr>
+<tr>
+  <td>3</td><td>Common keyword variation resolves correctly</td>
+  <td>Quick triggers ignore case and accept common keyword variations.</td>
+  <td>Student sends "tuition" or "dormitory" instead of the full menu label.</td>
+  <td>Bot resolves the request to the correct topic and returns the same information as the full shortcut.</td>
+  <td><span class="pass">Pass</span></td>
+</tr>
+<tr>
+  <td>4</td><td>Unrecognized input triggers menu fallback</td>
+  <td>Student input matches none of the four shortcuts and no academic question pattern.</td>
+  <td>Bot cannot match the input to a shortcut or knowledge-base question.</td>
+  <td>Bot does not return an unrelated topic; provides a polite fallback with the 4-topic menu.</td>
+  <td><span class="pass">Pass</span></td>
+</tr>
+<tr>
+  <td>5</td><td>Menu and replies render cleanly on Telegram</td>
+  <td>Menu items and topic responses use Telegram-safe formatting.</td>
+  <td>Student opens the menu and receives a topic answer.</td>
+  <td>Menu card, labels, and text display without broken markup or clipped content.</td>
+  <td><span class="pass">Pass</span></td>
+</tr>
+<tr>
+  <td>6</td><td>Empty / failed retrieval handled safely</td>
+  <td>A temporary network or knowledge-base retrieval error occurs.</td>
+  <td>Student selects one of the four topic shortcuts.</td>
+  <td>System does not hang or crash silently; an error notice asks the student to retry.</td>
+  <td><span class="pass">Pass</span></td>
+</tr>
+</table>
+
+<h3>Rule-Oriented Acceptance Criteria</h3>
+<ul>
+  <li>Quick triggers must cover Tuition Fees, Course Add/Drop, Dormitory, and Transcripts.</li>
+  <li>Menu and keyword matching must run through Buda agent prompt logic, not custom Telegram Bot API keyboard code or an external server.</li>
+  <li>Topic replies must use content from the university knowledge base.</li>
+  <li>Unknown keywords must not return unrelated topics.</li>
+  <li>Responses must render cleanly on Telegram.</li>
+</ul>
+</div>
+
+<!-- SECTION 9: SUMMARY -->
+<div class="section-break">
+<h2>9. Sprint 1 Summary &amp; Next Steps</h2>
+
+<h3>What Was Delivered</h3>
+<ul>
+  <li>A production Telegram gateway connecting real students to the Buda agent workspace, with no external server hosting.</li>
+  <li>A hardened 4-topic FAQ knowledge base (<code>faq.json</code>), sourced and verified directly from sdu.edu.kz.</li>
+  <li>Zero-hallucination guardrails enforced in <code>SOUL.md</code> for every reply, including strict grounding in the FAQ and safe handling of failed retrieval.</li>
+  <li>Case-insensitive, punctuation-tolerant quick-keyword matching for instant topic access.</li>
+</ul>
+
+<h3>QA Result Overview</h3>
+<table class="data">
+<tr><th>Story</th><th>Total Scenarios</th><th>Pass</th><th>Deferred</th></tr>
+<tr><td>US-01</td><td>5</td><td>4</td><td>1 (network latency)</td></tr>
+<tr><td>US-02</td><td>6</td><td>6</td><td>0</td></tr>
+</table>
+
+<h3>Next: Sprint 2</h3>
+<ul>
+  <li><b>US-03 — University Knowledge Base Setup</b> (Ibrayeva Altynay): scales the hardened FAQ into a full policy knowledge base.</li>
+  <li><b>US-04 — Document &amp; Guide Dispatch</b> (Bigali Assanali): delivers direct links and official PDF guides inside the Telegram chat.</li>
+</ul>
+</div>
+
+<!-- SECTION 10: REFERENCES -->
+<div class="section-break">
+<h2>10. References</h2>
+<div class="link-box">
+  <span class="lbl">Progress Sheet — User Stories, QA Tests &amp; Sprint Tracking (canonical source)</span>
+  <a href="https://docs.google.com/spreadsheets/d/1t1zm4GLZOaNZUwZuRNERl3t_-CYRkRwVVxfXbAob4Ns/edit?gid=1748034197#gid=1748034197">
+  https://docs.google.com/spreadsheets/d/1t1zm4GLZOaNZUwZuRNERl3t_-CYRkRwVVxfXbAob4Ns/edit?gid=1748034197#gid=1748034197</a>
+</div>
+<p class="small-note">All user story text, constraints, test scripts, and QA scenarios in this report are quoted
+verbatim from the sheets <code>US-01</code>, <code>US-01-QA</code>, <code>US-02</code>, and <code>US-02-QA</code>
+in the progress sheet above.</p>
+</div>
+
+</body>
+</html>

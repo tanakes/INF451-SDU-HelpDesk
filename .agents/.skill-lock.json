@@ -1,0 +1,16 @@
+{
+  "version": 3,
+  "skills": {
+    "pptx": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/anthropics/skills.git",
+      "skillPath": "skills/pptx/SKILL.md",
+      "skillFolderHash": "64529c8b3f35fe632b7256bd2f6d46e4b40160ce",
+      "pluginName": "document-skills",
+      "installedAt": "2026-09-21T10:18:57.804Z",
+      "updatedAt": "2026-09-21T10:18:57.804Z"
+    }
+  },
+  "dismissed": {}
+}
