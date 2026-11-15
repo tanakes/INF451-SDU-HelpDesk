@@ -84,16 +84,16 @@ def _startup():
     else:
         print("STARTUP: All required env vars are set")
 
-    # Set Telegram bot commands (US-01)
+    # Set Telegram bot commands
     if BOT_TOKEN:
         try:
             cmds = [
                 {"command": "start", "description": "Start the bot and show welcome menu"},
-                {"command": "menu", "description": "Show topic menu (US-02)"},
-                {"command": "profile", "description": "View/set your academic profile (US-08)"},
-                {"command": "advisor", "description": "Escalate to human advisor (US-09)"},
-                {"command": "tickets", "description": "Show open tickets (staff only, US-10)"},
-                {"command": "summary", "description": "Query analytics (staff only, US-06)"},
+                {"command": "menu", "description": "Show topic menu"},
+                {"command": "profile", "description": "View or set your academic profile"},
+                {"command": "advisor", "description": "Escalate to a human advisor"},
+                {"command": "tickets", "description": "Show open tickets (staff only)"},
+                {"command": "summary", "description": "Show query analytics (staff only)"},
                 {"command": "help", "description": "Show help information"},
             ]
             httpx.post(
@@ -256,10 +256,10 @@ HELP_MESSAGE = (
     "🆘 SDU Help Desk Bot Commands:\n\n"
     "/start - Start the bot and show welcome menu\n"
     "/menu - Show topic menu\n"
-    "/profile - View or set your academic profile (US-08)\n"
-    "/advisor - Escalate to a human advisor (US-09)\n"
-    "/tickets - Show open support tickets (staff only, US-10)\n"
-    "/summary - Show query analytics (staff only, US-06)\n"
+    "/profile - View or set your academic profile\n"
+    "/advisor - Escalate to a human advisor\n"
+    "/tickets - Show open tickets (staff only)\n"
+    "/summary - Show query analytics (staff only)\n"
     "/help - Show this help\n\n"
     "Or just ask your question in Kazakh, Russian, or English."
 )
@@ -405,11 +405,14 @@ async def webhook(request: Request, x_telegram_bot_api_secret_token: str | None 
         # ── US-09: /advisor command ──
         if lower == "/advisor" or lower in ("advisor", "ticket", "human", "escalate"):
             ticket_id = f"T-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}-{chat_id[-4:]}"
-            create_ticket(ticket_id, chat_id, sender, text, now, session_id)
+            escalation_context = text.strip()
+            if lower == "/advisor":
+                escalation_context = "Student requested to speak with a human advisor."
+            create_ticket(ticket_id, chat_id, sender, escalation_context, now, session_id)
             notify = (
                 "🚨 New Escalation Ticket:\n\n"
                 f"Student: {sender} (ID: {chat_id})\n"
-                f"Request: '{text}'\n\n"
+                f"Request: {escalation_context}\n\n"
                 f"Staff Actions:\n"
                 f"1. Use /tickets to view open tickets\n"
                 f"2. Resolve ticket for {ticket_id}\n"
