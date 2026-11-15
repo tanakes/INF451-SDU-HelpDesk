@@ -91,6 +91,7 @@ async def answer(student_message: str, api_key: str, model_name: str = NVIDIA_MO
         ],
         "temperature": 0.3,
         "max_tokens": 1000,
+        "reasoning": {"effort": "low"},
     }
 
     try:
