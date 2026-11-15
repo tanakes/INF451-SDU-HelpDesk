@@ -164,11 +164,11 @@ async def answer(student_message: str, api_key: str, model_name: str = NVIDIA_MO
             {"role": "user", "content": f"{context}\n\nStudent question: {student_message}\n\nAnswer the student following the hard rules above."},
         ],
         "temperature": 0.3,
-        "max_tokens": 1000,
+        "max_tokens": 4000,
     }
 
     try:
-        async with httpx.AsyncClient(timeout=60) as client:
+        async with httpx.AsyncClient(timeout=120) as client:
             resp = await client.post(
                 f"{NVIDIA_BASE_URL}/chat/completions",
                 headers=headers,
@@ -178,25 +178,13 @@ async def answer(student_message: str, api_key: str, model_name: str = NVIDIA_MO
             data = resp.json()
         msg = data["choices"][0]["message"]
         content = msg.get("content") or ""
+        if content and len(content) > 10:
+            return content
+        # Fallback: try reasoning_content with stripping
         reasoning = msg.get("reasoning_content") or ""
-
-        # Try content first
-        if content and not _looks_like_thinking(content):
-            cleaned = _strip_thinking(content)
-            if cleaned and len(cleaned) > 10:
-                return cleaned
-
-        # Try reasoning_content as fallback
-        if reasoning and not _looks_like_thinking(reasoning):
-            cleaned = _strip_thinking(reasoning)
-            if cleaned and len(cleaned) > 10:
-                return cleaned
-
-        # Last resort: strip thinking from reasoning_content
         cleaned = _strip_thinking(reasoning)
         if cleaned and len(cleaned) > 10:
             return cleaned
-
         return "I could not generate a reply. Please try again."
     except httpx.HTTPStatusError as exc:
         return f"I'm temporarily unable to answer (API error {exc.response.status_code}). Please contact the SSC in Block B or try again later."
