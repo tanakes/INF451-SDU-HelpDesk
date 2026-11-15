@@ -5,7 +5,7 @@ Endpoints:
   POST /webhook/{bot_token}  Telegram webhook entry point
 
 Env vars:
-  BOT_TOKEN, GEMINI_API_KEY, DATABASE_URL, WEBHOOK_SECRET,
+  BOT_TOKEN, NVIDIA_API_KEY, DATABASE_URL, WEBHOOK_SECRET,
   STAFF_GROUP_CHAT_ID, PORT (set by Render)
 """
 from __future__ import annotations
@@ -26,7 +26,7 @@ app = FastAPI(title="SDU Help Desk Bot")
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
 WEBHOOK_SECRET = os.environ.get("WEBHOOK_SECRET", "")
 STAFF_GROUP_CHAT_ID = os.environ.get("STAFF_GROUP_CHAT_ID", "")
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+NVIDIA_API_KEY = os.environ.get("NVIDIA_API_KEY", "")
 
 TELEGRAM_API = "https://api.telegram.org/bot{token}/{method}"
 
@@ -99,7 +99,7 @@ async def webhook(token: str, request: Request, x_telegram_bot_api_secret_token:
             _send_message(chat_id, "🔒 Access Restricted: This advisor command is only available inside the authorized staff group.")
             return Response(status_code=200)
         docs = find_relevant_docs("query summary analytics")
-        reply = await answer("Show me the executive summary of student questions (answered vs not covered, by category and language).", GEMINI_API_KEY)
+        reply = await answer("Show me the executive summary of student questions (answered vs not covered, by category and language).", NVIDIA_API_KEY)
         _send_message(chat_id, reply)
         log_query(now, "Campus Services", "English", "answered", "Staff requested executive summary")
         return Response(status_code=200)
@@ -152,7 +152,7 @@ async def webhook(token: str, request: Request, x_telegram_bot_api_secret_token:
     # Normal Q&A path — grounded LLM answer
     kb_docs = find_relevant_docs(text)
     category = kb_docs[0].category if kb_docs else "Other / Not covered"
-    reply = await answer(text, GEMINI_API_KEY)
+    reply = await answer(text, NVIDIA_API_KEY)
     _send_message(chat_id, reply)
     log_query(now, category, "English", "answered" if kb_docs else "not covered", text[:160])
     return Response(status_code=200)

@@ -1,6 +1,6 @@
 # SDU Help Desk Bot — Render Migration
 
-Port of the buda.im SDU Help Desk bot to a self-hosted Telegram webhook on Render, with Neon Postgres for persistence and Gemini (free tier) as the LLM.
+Port of the buda.im SDU Help Desk bot to a self-hosted Telegram webhook on Render, with Render Postgres for persistence and NVIDIA Nemotron 3.5 Lightning as the LLM.
 
 ## What was migrated
 From your buda.im backup (`sprint5-unfinished-sdu-helpdesk-backup.tar.gz`):
@@ -11,30 +11,30 @@ From your buda.im backup (`sprint5-unfinished-sdu-helpdesk-backup.tar.gz`):
 ## Prerequisites
 1. **Telegram Bot Token** — talk to @BotFather, create a bot, copy the token.
 2. **Render account** — create a web service + Postgres database.
-3. **Neon** (optional) — or use Render's built-in Postgres via `render.yaml`.
-4. **Gemini API key** — https://aistudio.google.com (free tier).
+3. **NVIDIA API key** — https://integrate.api.nvidia.com (Nemotron 3.5 Lightning 30B).
 
 ## Local setup
 ```bash
 cd sdu-helpdesk-render
 cp .env.example .env
-# edit .env with your BOT_TOKEN, GEMINI_API_KEY, DATABASE_URL, STAFF_GROUP_CHAT_ID
+# edit .env with your BOT_TOKEN, NVIDIA_API_KEY, DATABASE_URL, STAFF_GROUP_CHAT_ID
 pip install -r requirements.txt
 uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
 ## Deploy to Render
-Option A — Render Blueprint (recommended):
+Option A — Manual (recommended, API is limited for DB creation):
+- Create a Postgres database in Render dashboard (Starter plan, free) — copy connection string → `DATABASE_URL`
+- Create a Web Service → connect GitHub repo `tanakes/INF451-SDU-HelpDesk`
+  - Build command: `pip install -r requirements.txt`
+  - Start command: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+- Add env vars: `BOT_TOKEN`, `NVIDIA_API_KEY`, `DATABASE_URL`, `STAFF_GROUP_CHAT_ID` (= `tsk2V5TyqHMpUCevygQ`)
+- Optional: `WEBHOOK_SECRET`
+
+Option B — Render Blueprint:
 - Push this folder to GitHub
 - In Render: "Blueprint" → connect repo → it reads `render.yaml`
-- Adds a web service + Postgres DB automatically
-- Set `BOT_TOKEN`, `GEMINI_API_KEY`, `WEBHOOK_SECRET`, `STAFF_GROUP_CHAT_ID` as env vars (not synced from repo)
-
-Option B — Manual:
-- Create a Python web service, connect a Postgres DB
-- Build: `pip install -r requirements.txt`
-- Start: `uvicorn main:app --host 0.0.0.0 --port $PORT`
-- Set the same env vars
+- Set `BOT_TOKEN`, `NVIDIA_API_KEY`, `DATABASE_URL`, `WEBHOOK_SECRET`, `STAFF_GROUP_CHAT_ID` as env vars
 
 ## Set the Telegram webhook
 Once deployed at `https://your-app.onrender.com`, set the webhook:
@@ -50,14 +50,14 @@ Optional secret token:
 ## Free-tier caveat (Render)
 Render's free web service spins down after ~15 min inactivity. The first Telegram message after a spin-down may be delayed ~20–40 s (cold start). Options:
 - Pay $7/mo for a "Starter" web service (no spin-down)
-- Or ping `GET /` every 10 minutes (keeps it awake, but first hit still has a small cold start)
+- Or ping `GET /` every 10 minutes (keeps it awake)
 
 ## Env vars
 | Var | Required | Description |
 |---|---|---|
 | `BOT_TOKEN` | yes | From @BotFather |
-| `GEMINI_API_KEY` | yes | From Google AI Studio |
-| `DATABASE_URL` | yes | Neon or Render Postgres connection string |
+| `NVIDIA_API_KEY` | yes | From https://integrate.api.nvidia.com |
+| `DATABASE_URL` | yes | Render Postgres connection string |
 | `WEBHOOK_SECRET` | no | Secret token Telegram sends for webhook verification |
 | `STAFF_GROUP_CHAT_ID` | no | Authorized staff group chat ID (default from SOUL.md) |
 | `PORT` | no | Set by Render automatically |

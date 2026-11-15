@@ -1,17 +1,21 @@
 """LLM integration for the SDU Help Desk Bot.
 
-Builds a system prompt distilled from SOUL.md rules and calls Gemini.
-All output must follow Telegram formatting rules: zero asterisks, double line
-breaks between paragraphs, no Markdown headings (#, ##).
+Calls NVIDIA Nemotron 3.5 Lightning 30B via the OpenAI-compatible API at
+https://integrate.api.nvidia.com/v1. System prompt distilled from SOUL.md rules:
+zero asterisks, double line breaks between paragraphs, no Markdown headings,
+strict grounding in knowledge base, Kazakh/Russian/English replies.
 """
 from __future__ import annotations
 
 import os
-from typing import List
+import json
 
-import google.generativeai as genai
+import httpx
 
-from knowledge_base import KBDoc, find_relevant_docs
+from knowledge_base import find_relevant_docs
+
+NVIDIA_BASE_URL = "https://integrate.api.nvidia.com/v1"
+NVIDIA_MODEL = "nvidia/nemotron-3.5-lightning-30b-a3b"
 
 
 SYSTEM_PROMPT = """You are the SDU University Help Desk Assistant, an official university support bot operating via Telegram and web chat.
@@ -34,11 +38,7 @@ Do not output internal monologue, planning, or status updates. Output only the f
 """
 
 
-def _configure_gemini(api_key: str):
-    genai.configure(api_key=api_key)
-
-
-def build_context(docs: List[KBDoc]) -> str:
+def build_context(docs) -> str:
     if not docs:
         return "No relevant knowledge-base documents found."
     parts = ["Relevant knowledge-base sources:"]
@@ -51,19 +51,38 @@ def build_context(docs: List[KBDoc]) -> str:
     return "\n".join(parts)
 
 
-async def answer(student_message: str, api_key: str, model_name: str = "gemini-1.5-flash") -> str:
-    _configure_gemini(api_key)
+async def answer(student_message: str, api_key: str, model_name: str = NVIDIA_MODEL) -> str:
+    if not api_key:
+        return "I'm temporarily unable to answer. No AI API key is configured. Please contact the SSC in Block B."
+
     docs = find_relevant_docs(student_message)
     context = build_context(docs)
 
-    model = genai.GenerativeModel(model_name, system_instruction=SYSTEM_PROMPT)
-    prompt = (
-        f"{context}\n\n"
-        f"Student question: {student_message}\n\n"
-        "Answer the student following the hard rules above."
-    )
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "model": model_name,
+        "messages": [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": f"{context}\n\nStudent question: {student_message}\n\nAnswer the student following the hard rules above."},
+        ],
+        "temperature": 0.3,
+        "max_tokens": 1000,
+    }
+
     try:
-        result = await model.generate_content_async(prompt)
-        return result.text or "I could not generate a reply. Please try again."
+        async with httpx.AsyncClient(timeout=60) as client:
+            resp = await client.post(
+                f"{NVIDIA_BASE_URL}/chat/completions",
+                headers=headers,
+                json=payload,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+        return data["choices"][0]["message"]["content"] or "I could not generate a reply. Please try again."
+    except httpx.HTTPStatusError as exc:
+        return f"I'm temporarily unable to answer (API error {exc.response.status_code}). Please contact the SSC in Block B or try again later."
     except Exception as exc:  # pragma: no cover - runtime safety
         return f"I'm temporarily unable to answer. Please contact the SSC in Block B or try again later. ({exc})"
