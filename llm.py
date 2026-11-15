@@ -81,7 +81,9 @@ async def answer(student_message: str, api_key: str, model_name: str = NVIDIA_MO
             )
             resp.raise_for_status()
             data = resp.json()
-        return data["choices"][0]["message"]["content"] or "I could not generate a reply. Please try again."
+        msg = data["choices"][0]["message"]
+        content = msg.get("content") or msg.get("reasoning_content") or ""
+        return content or "I could not generate a reply. Please try again."
     except httpx.HTTPStatusError as exc:
         return f"I'm temporarily unable to answer (API error {exc.response.status_code}). Please contact the SSC in Block B or try again later."
     except Exception as exc:  # pragma: no cover - runtime safety
