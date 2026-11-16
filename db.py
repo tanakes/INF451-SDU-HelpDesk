@@ -271,20 +271,51 @@ def list_open_tickets() -> list[dict]:
     return [r for r in rows if r.get("status") == "pending"]
 
 
-def get_user_state(user_id: str) -> dict:
+def get_ticket(ticket_id: str) -> Optional[dict]:
     if _use_db:
         try:
-            row = _db_exec("SELECT state_json FROM user_state WHERE user_id=%s", (str(user_id),), fetch="one")
-            if not row or not row[0]:
-                return {}
-            return json.loads(row[0])
+            row = _db_exec(
+                "SELECT ticket_id, user_id, sender, context, created_at, session_id, status, resolution_message FROM tickets WHERE ticket_id=%s",
+                (ticket_id,),
+                fetch="one",
+            )
+            if not row:
+                return None
+            return {
+                "ticket_id": row[0], "user_id": row[1], "sender": row[2], "context": row[3],
+                "created_at": row[4], "session_id": row[5], "status": row[6], "resolution_message": row[7],
+            }
         except Exception:
             pass
-    rows = _load("user_state.json")
+    rows = _load("tickets.json")
     for r in rows:
-        if str(r.get("user_id")) == str(user_id):
-            return r.get("state") or {}
-    return {}
+        if r.get("ticket_id") == ticket_id:
+            return r
+    return None
+
+
+def resolve_ticket(ticket_id: str, resolution_message: str) -> bool:
+    if _use_db:
+        try:
+            row = _db_exec(
+                "UPDATE tickets SET status=%s, resolution_message=%s WHERE ticket_id=%s AND status=%s RETURNING ticket_id",
+                ("resolved", resolution_message, ticket_id, "pending"),
+                fetch="one",
+            )
+            return bool(row)
+        except Exception:
+            pass
+    rows = _load("tickets.json")
+    updated = False
+    for r in rows:
+        if r.get("ticket_id") == ticket_id and r.get("status") == "pending":
+            r["status"] = "resolved"
+            r["resolution_message"] = resolution_message
+            updated = True
+            break
+    if updated:
+        _save("tickets.json", rows)
+    return updated
 
 
 def set_user_state(user_id: str, state: dict):

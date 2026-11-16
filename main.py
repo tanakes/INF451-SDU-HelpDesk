@@ -33,6 +33,8 @@ from db import (
     get_profile,
     save_profile,
     list_open_tickets,
+    get_ticket,
+    resolve_ticket,
     save_session,
     append_session_transcript,
     get_user_state,
@@ -118,6 +120,7 @@ def _startup():
                 {"command": "profile", "description": "View or set your academic profile"},
                 {"command": "advisor", "description": "Escalate to a human advisor"},
                 {"command": "tickets", "description": "Show open tickets (staff only)"},
+                {"command": "resolve", "description": "Resolve/answer a ticket (staff only)"},
                 {"command": "summary", "description": "Show query analytics (staff only)"},
                 {"command": "help", "description": "Show help information"},
             ]
@@ -303,6 +306,7 @@ HELP_MESSAGE = (
     "/profile - View or set your academic profile\n"
     "/advisor - Escalate to a human advisor\n"
     "/tickets - Show open tickets (staff only)\n"
+    "/resolve <ticket_id> <answer> - Resolve a ticket and notify the student (staff only)\n"
     "/summary - Show query analytics (staff only)\n"
     "/help - Show this help\n\n"
     "Or just ask your question in Kazakh, Russian, or English."
@@ -505,7 +509,8 @@ async def webhook(request: Request, x_telegram_bot_api_secret_token: str | None 
                     f"Student: {sender}\n"
                     f"Question: {escalation_context}\n\n"
                     f"Ticket ID: {ticket_id}\n"
-                    "Staff can use /tickets in the staff group to view open tickets."
+                    "Staff can use /tickets in the staff group to view open tickets.\n"
+                    f"To answer and close: /resolve {ticket_id} <your answer>"
                 )
                 if STAFF_GROUP_CHAT_ID:
                     _send_message(STAFF_GROUP_CHAT_ID, notify)
@@ -540,12 +545,73 @@ async def webhook(request: Request, x_telegram_bot_api_secret_token: str | None 
                 lines.append("None.")
             else:
                 for t in tickets:
-                    lines.append(f"• {t.get('ticket_id','N/A')}: {t.get('sender','Unknown')} — {str(t.get('context',''))[:120]}")
+                    tid = t.get('ticket_id', 'N/A')
+                    lines.append(f"• {tid}: {t.get('sender','Unknown')} — {str(t.get('context',''))[:120]}")
+                    lines.append(f"  Reply: /resolve {tid} <your answer>")
             reply = "\n".join(lines)
             result = _send_message(chat_id, reply)
             if not result["success"]:
                 print(f"SEND_FAILED: {result['error']}")
             _save_session_transcript(session_id, sender, "/tickets", reply)
+            return Response(status_code=200)
+
+        # /resolve command (staff only): answer and close a ticket
+        if command in ("/resolve", "/answer", "/close"):
+            if not _is_staff_chat(chat_id):
+                reply = "🔒 Access Restricted: This command is only available inside the authorized staff group."
+                _send_message(chat_id, reply)
+                _save_session_transcript(session_id, sender, command, reply)
+                return Response(status_code=200)
+            parts = text.split(None, 2)
+            if len(parts) < 3:
+                reply = "Usage: /resolve <ticket_id> <your answer>\nExample: /resolve T-20261116120000-1234 Please visit SSC in Block B with your student ID."
+                _send_message(chat_id, reply)
+                _save_session_transcript(session_id, sender, text, reply)
+                return Response(status_code=200)
+            ticket_id = parts[1].strip()
+            answer_text = parts[2].strip()
+            ticket = get_ticket(ticket_id)
+            if not ticket:
+                reply = f"Ticket not found: {ticket_id}"
+                _send_message(chat_id, reply)
+                _save_session_transcript(session_id, sender, text, reply)
+                return Response(status_code=200)
+            if ticket.get("status") == "resolved":
+                reply = f"Ticket {ticket_id} is already resolved."
+                _send_message(chat_id, reply)
+                _save_session_transcript(session_id, sender, text, reply)
+                return Response(status_code=200)
+
+            resolved = resolve_ticket(ticket_id, answer_text)
+            if not resolved:
+                reply = f"Could not resolve ticket {ticket_id}. It may have been resolved already."
+                _send_message(chat_id, reply)
+                _save_session_transcript(session_id, sender, text, reply)
+                return Response(status_code=200)
+
+            student_id = str(ticket.get("user_id", "")).strip()
+            notify_student = (
+                f"✅ Reply from SDU Help Desk advisor\n\n"
+                f"Ticket: {ticket_id}\n"
+                f"Your question: {str(ticket.get('context','')).strip()}\n\n"
+                f"Answer:\n{answer_text}"
+            )
+            delivered = False
+            if student_id:
+                send_res = _send_message(student_id, notify_student)
+                delivered = bool(send_res.get("success"))
+                if not delivered:
+                    print(f"TICKET_REPLY_SEND_FAILED: {send_res.get('error')}")
+
+            reply = (
+                f"✅ Ticket {ticket_id} resolved.\n"
+                f"Student notified: {'Yes' if delivered else 'No'}"
+            )
+            result = _send_message(chat_id, reply)
+            if not result["success"]:
+                print(f"SEND_FAILED: {result['error']}")
+            _save_session_transcript(session_id, sender, text, reply)
+            log_query(now, "Other / Not covered", "English", "answered", f"Staff resolved ticket {ticket_id}")
             return Response(status_code=200)
 
         # /summary command (staff only)
