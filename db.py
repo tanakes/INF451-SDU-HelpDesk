@@ -366,12 +366,38 @@ def append_session_transcript(session_id: str, user_msg: str, bot_reply: str):
     _save(f"session_{session_id}.json", rows)
 
 
-def get_current_session_id(chat_id: str) -> str:
-    state = get_user_state(chat_id)
-    sid = state.get("current_session_id")
-    if isinstance(sid, str) and sid.strip():
-        return sid
-    return f"tg-{chat_id}"
+def get_query_log_summary(limit_recent: int = 5) -> dict:
+    summary = {
+        "total": 0,
+        "by_outcome": {},
+        "by_category": {},
+        "by_language": {},
+        "recent": [],
+    }
+    rows = []
+    if _use_db:
+        try:
+            all_rows = _db_exec(
+                "SELECT timestamp_utc, category, language, outcome, summary FROM query_log ORDER BY id DESC",
+                fetch="all",
+            ) or []
+            rows = [{
+                "timestamp_utc": r[0], "category": r[1], "language": r[2], "outcome": r[3], "summary": r[4],
+            } for r in all_rows]
+        except Exception:
+            rows = []
+    if not rows:
+        rows = list(reversed(_load("query_log.json")))
+    summary["total"] = len(rows)
+    for r in rows:
+        outcome = r.get("outcome") or "unknown"
+        category = r.get("category") or "Unknown"
+        language = r.get("language") or "Unknown"
+        summary["by_outcome"][outcome] = summary["by_outcome"].get(outcome, 0) + 1
+        summary["by_category"][category] = summary["by_category"].get(category, 0) + 1
+        summary["by_language"][language] = summary["by_language"].get(language, 0) + 1
+    summary["recent"] = rows[: max(0, int(limit_recent))]
+    return summary
 
 
 def start_new_session(chat_id: str) -> str:

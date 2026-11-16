@@ -40,6 +40,7 @@ from db import (
     clear_user_state,
     get_current_session_id,
     start_new_session,
+    get_query_log_summary,
 )
 
 app = FastAPI(title="SDU Help Desk Bot")
@@ -554,11 +555,33 @@ async def webhook(request: Request, x_telegram_bot_api_secret_token: str | None 
                 _send_message(chat_id, reply)
                 _save_session_transcript(session_id, sender, "/summary", reply)
                 return Response(status_code=200)
-            profile = None
-            reply = await answer(
-                "Show a concise executive summary of student helpdesk queries from recent logs: totals, answered vs not covered, breakdown by category and language, and top unanswered topics. Use available stored data context if known; otherwise state what data is unavailable.",
-                NVIDIA_API_KEY,
-                profile=profile,
+            stats = get_query_log_summary(limit_recent=8)
+            total = stats.get("total", 0)
+            by_outcome = stats.get("by_outcome", {})
+            by_category = stats.get("by_category", {})
+            by_language = stats.get("by_language", {})
+            recent = stats.get("recent", [])
+            def _fmt_map(d):
+                if not d:
+                    return "- None"
+                items = sorted(d.items(), key=lambda x: (-x[1], x[0]))
+                return "\n".join([f"- {k}: {v}" for k, v in items])
+            recent_lines = []
+            for r in recent:
+                recent_lines.append(f"- [{r.get('timestamp_utc','')}] {r.get('category','Unknown')} | {r.get('language','Unknown')} | {r.get('outcome','unknown')} | {str(r.get('summary',''))[:120]}")
+            if not recent_lines:
+                recent_lines.append("- None")
+            reply = (
+                "📊 Helpdesk Query Summary\n\n"
+                f"Total logged queries: {total}\n\n"
+                "Answered vs not covered:\n"
+                f"{_fmt_map(by_outcome)}\n\n"
+                "By category:\n"
+                f"{_fmt_map(by_category)}\n\n"
+                "By language:\n"
+                f"{_fmt_map(by_language)}\n\n"
+                "Recent queries:\n"
+                + "\n".join(recent_lines)
             )
             result = _send_message(chat_id, reply)
             if not result["success"]:
