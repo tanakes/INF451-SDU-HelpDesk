@@ -38,6 +38,8 @@ from db import (
     get_user_state,
     set_user_state,
     clear_user_state,
+    get_current_session_id,
+    start_new_session,
 )
 
 app = FastAPI(title="SDU Help Desk Bot")
@@ -111,6 +113,7 @@ def _startup():
             cmds = [
                 {"command": "start", "description": "Start the bot and show welcome menu"},
                 {"command": "menu", "description": "Show topic menu"},
+                {"command": "new", "description": "Start a new chat session"},
                 {"command": "profile", "description": "View or set your academic profile"},
                 {"command": "advisor", "description": "Escalate to a human advisor"},
                 {"command": "tickets", "description": "Show open tickets (staff only)"},
@@ -295,6 +298,7 @@ HELP_MESSAGE = (
     "🆘 SDU Help Desk Bot Commands:\n\n"
     "/start - Start the bot and show welcome menu\n"
     "/menu - Show topic menu\n"
+    "/new - Start a new chat session\n"
     "/profile - View or set your academic profile\n"
     "/advisor - Escalate to a human advisor\n"
     "/tickets - Show open tickets (staff only)\n"
@@ -396,18 +400,29 @@ async def webhook(request: Request, x_telegram_bot_api_secret_token: str | None 
     if not text:
         return Response(status_code=200)
 
-    session_id = f"tg-{chat_id}"
+    session_id = get_current_session_id(chat_id)
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     lower = text.strip().lower()
 
     try:
-        # в”Ђв”Ђ US-01: /start command в”Ђв”Ђ
+        # /start command
         if lower == "/start":
             result = _send_message(chat_id, WELCOME_MESSAGE)
             if not result["success"]:
                 print(f"SEND_FAILED: {result['error']}")
             _save_session_transcript(session_id, sender, "/start", WELCOME_MESSAGE)
             log_query(now, "System", "English", "answered", "User started bot with /start")
+            return Response(status_code=200)
+
+        # /new command - start a fresh conversation session
+        if lower in ("/new", "/newsession", "/reset"):
+            new_session_id = start_new_session(chat_id)
+            reply = "✅ Started a new session. Your previous chat context is cleared. How can I help you?"
+            result = _send_message(chat_id, reply)
+            if not result["success"]:
+                print(f"SEND_FAILED: {result['error']}")
+            _save_session_transcript(new_session_id, sender, text, reply)
+            log_query(now, "System", "English", "answered", "User started a new session")
             return Response(status_code=200)
 
         # в”Ђв”Ђ US-02: /menu command в”Ђв”Ђ

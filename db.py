@@ -364,3 +364,20 @@ def append_session_transcript(session_id: str, user_msg: str, bot_reply: str):
         "bot": bot_reply,
     })
     _save(f"session_{session_id}.json", rows)
+
+
+def get_current_session_id(chat_id: str) -> str:
+    state = get_user_state(chat_id)
+    sid = state.get("current_session_id")
+    if isinstance(sid, str) and sid.strip():
+        return sid
+    return f"tg-{chat_id}"
+
+
+def start_new_session(chat_id: str) -> str:
+    state = get_user_state(chat_id)
+    new_sid = f"tg-{chat_id}-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
+    state["current_session_id"] = new_sid
+    state.pop("awaiting_advisor_question", None)
+    set_user_state(chat_id, state)
+    return new_sid
