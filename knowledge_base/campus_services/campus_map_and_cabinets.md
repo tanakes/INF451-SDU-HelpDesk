@@ -1,36 +1,25 @@
 ---
-title: "SDU Campus Map, Lecture Halls ('Бочки'), and Navigation"
-source_label: "SDU Campus Layout Map & Student Community Guide"
+title: "SDU Campus Map, Lecture Halls (Bochki), and Navigation"
+source_label: "SDU Campus Layout Map and Student Community Guide"
 keywords:
   - map
   - campus map
   - where is
   - location
+  - navigate
+  - navigation
+  - room
+  - cabinet
+  - hall
+  - lecture hall
+  - auditorium
   - wifi zone
-  - wifi-zone
-  - вайфай зона
-  - вайфай-зона
+  - wi-fi zone
   - canteen
-  - столовая
-  - буфет
-  - cabinets
-  - rooms
+  - red canteen
   - bochki
   - bochka
-  - бочки
-  - бочка
-  - карта
-  - где находится
-  - кабина
-  - аудитория
-  - D117
-  - D218
-  - D116
-  - D217
-  - D113
-  - D214
-  - E117
-  - E221
+  - barrels
   - A1
   - A2
   - B1
@@ -39,62 +28,56 @@ keywords:
   - C2
   - D1
   - D2
+  - D117
+  - D218
+  - D116
+  - D217
+  - D113
+  - D214
+  - E117
+  - E221
+  - Block A
+  - Block B
+  - Block C
+  - Block D
+  - Block E
   - Block I
-  - картасы
-  - аудиториялар
-  - қайда
-  - орналасқан
+  - advisor desk
+  - SSC
+  - library
 ---
 
-# SDU Campus Map, Lecture Halls ('Бочки'), and Navigation
+# SDU Campus Map, Lecture Halls (Bochki), and Navigation
 
-## General Campus Location & Navigation Framework
-When a student asks where any room, hall, canteen, facility, or physical zone is located on campus:
+## How to answer location questions
+If a student asks where a room, hall, canteen, or place is on campus:
+- If the place is listed below, give the exact location (block, floor, landmark).
+- If the student uses "bochka/bochki" or gives codes like A2, D1, E117, explain the equivalent hall/cabinet and where it is.
+- If the exact place is not documented, say it is not in the available campus location information, suggest checking the SDU campus map, and direct them to the Student Service Center (SSC) in Block B or the Advisor Desk in Block D for help.
+- For physical map/navigation requests, the campus map image can be provided.
 
-1. **Documented Locations (Exact Coordinates):**
-   - Provide the specific block, floor, and landmark directions (e.g. SSC in Block B, Lecture Halls / Бочки A1–D2 in Blocks D/E, Red Canteen in Block E).
+## Key landmarks
+- Student Service Center (SSC) and Registrar: Block B (1st floor).
+- Advisor Desk: Block D, next to Bochka C1 (D113) / C2 (D214).
+- Red Canteen: Block E, next to Bochka D1 (E117) / D2 (E221).
+- Library and printing facilities: see campus map.
+- Block I: new academic block (recent addition; may not appear on older map).
 
-2. **Similar / Confusable Names (General Disambiguation Principle):**
-   - If the student asks for a location name that is NOT explicitly documented, but resembles a known location name:
-   - Do NOT guess or assume they are the same place.
-   - Politely ask a clarifying question:
-     *"I do not have information about [Asked Name] in my knowledge base. Did you mean [Documented Name] (in [Block]), or are you looking for a different place?"*
+## Large lecture halls (Bochki) - codes and locations
+In SDU schedules, large amphitheater lecture halls called "bochki" have both a letter code (A1-D2) and a cabinet number.
 
-3. **Undocumented Locations & General Fallback (Map Dispatch):**
-   - If a place is not in the knowledge base (or the student confirms they are looking for an undocumented room/hall):
-   - State honestly: *"I do not have specific room coordinates for [Place] in my knowledge base. Here is the SDU Campus Layout Map to help you navigate between the main blocks (A to H), or you can ask at the Advisor Desk in Block D (next to Бочка C1/C2) or the SSC in Block B."*
-   - Dispatch the campus map: `[send:sdu-helpdesk-bot/documents/assets/SDU_map.jpg]`.
+- A1 = D117 (Bochka A1): 1st floor, 1st lecture hall from the main entrance.
+- A2 = D218 (Bochka A2): 2nd floor, 1st lecture hall from the main entrance.
+- B1 = D116 (Bochka B1): 1st floor, 2nd lecture hall from the main entrance.
+- B2 = D217 (Bochka B2): 2nd floor, 2nd lecture hall from the main entrance.
+- C1 = D113 (Bochka C1): 1st floor, 3rd lecture hall from the main entrance, next to the Advisor Desk.
+- C2 = D214 (Bochka C2): 2nd floor, 3rd lecture hall from the main entrance, next to the Advisor Desk.
+- D1 = E117 (Bochka D1): 1st floor, 4th lecture hall from the main entrance, next to the Red Canteen.
+- D2 = E221 (Bochka D2): 2nd floor, 4th lecture hall from the main entrance, next to the Red Canteen.
 
-4. **Physical "Wi-Fi Zone" Disambiguation:**
-   - "Wi-Fi Zone" / "Вайфай зона" is a physical student lounge / area on campus, NOT a technical inquiry about Wi-Fi credentials or passwords. Dispatch the campus map and location directions.
+## Quick answers
+- Where is A2? A2 (Bochka A2) is cabinet D218, on the 2nd floor, the 1st lecture hall from the main entrance.
+- Where is E117? E117 is Bochka D1, on the 1st floor, the 4th lecture hall from the main entrance, next to the Red Canteen (Block E area).
+- What is "bochka"? "Bochki" are SDU's large amphitheater lecture halls (A1/A2/B1/B2/C1/C2/D1/D2), each with a cabinet number as listed above.
 
-## Known Landmark Coordinates
-- **Student Service Center (SSC) & Registrar:** Block B (1st floor).
-- **Advisor Desk:** Block D, next to Бочка C1 (D113) / C2 (D214).
-- **Red Canteen:** Block E, next to Бочка D1 (E117) / D2 (E221).
-- **Library & Printing Facilities:** Main Library Block (refer to campus map).
-- **Block I:** New academic block (recent campus addition not shown on the older visual map).
-
-## Large Lecture Halls ("Бочки") Cabinet Equivalencies
-In SDU schedule codes, large amphitheater lecture halls ("бочки") have both a letter-number code (A1, A2, B1, B2, C1, C2, D1, D2) and a numeric cabinet number (D117, D218, etc.).
-
-| Schedule Code | Cabinet Number | Floor & Landmark Location |
-|---|---|---|
-| A1 | D117 | 1st Floor: 1st lecture hall from the Main Entrance |
-| A2 | D218 | 2nd Floor: 1st lecture hall from the Main Entrance |
-| B1 | D116 | 1st Floor: 2nd lecture hall from the Main Entrance |
-| B2 | D217 | 2nd Floor: 2nd lecture hall from the Main Entrance |
-| C1 | D113 | 1st Floor: 3rd lecture hall from Main Entrance (next to Advisor Desk) |
-| C2 | D214 | 2nd Floor: 3rd lecture hall from Main Entrance (next to Advisor Desk) |
-| D1 | E117 | 1st Floor: 4th lecture hall from Main Entrance (next to Red Canteen) |
-| D2 | E221 | 2nd Floor: 4th lecture hall from Main Entrance (next to Red Canteen) |
-
-## Location Descriptions (Russian / English)
-- D117 (Бочка A1): Находится на первом этаже, первая бочка от главного входа.
-- D218 (Бочка A2): Находится на втором этаже, первая бочка от главного входа.
-- D116 (Бочка B1): Находится на первом этаже, вторая бочка от главного входа.
-- D217 (Бочка B2): Находится на втором этаже, вторая бочка от главного входа.
-- D113 (Бочка C1): Находится на первом этаже, третья бочка от главного входа или рядом с Advisor Desk.
-- D214 (Бочка C2): Находится на втором этаже, третья бочка от главного входа или рядом с Advisor Desk.
-- E117 (Бочка D1): Находится на первом этаже, четвертая бочка от главного входа или рядом с Red Canteen.
-- E221 (Бочка D2): Находится на втором этаже, четвертая бочка от главного входа или рядом с Red Canteen.
+Source: SDU Campus Layout Map and Student Community Guide
