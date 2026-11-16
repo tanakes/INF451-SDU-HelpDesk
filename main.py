@@ -624,38 +624,39 @@ async def webhook(request: Request, x_telegram_bot_api_secret_token: str | None 
                 _send_message(chat_id, reply)
                 _save_session_transcript(session_id, sender, "/summary", reply)
                 return Response(status_code=200)
-            stats = get_query_log_summary(limit_recent=8)
+            stats = get_query_log_summary(limit_recent=5)
             total = stats.get("total", 0)
             by_outcome = stats.get("by_outcome", {})
             by_category = stats.get("by_category", {})
             by_language = stats.get("by_language", {})
-            recent = stats.get("recent", [])
+            unanswered = stats.get("unanswered", [])
+
             def _fmt_map(d):
                 if not d:
                     return "- None"
-                items = sorted(d.items(), key=lambda x: (-x[1], x[0]))
+                items = sorted(d.items(), key=lambda x: (-x[1], str(x[0])))
                 return "\n".join([f"- {k}: {v}" for k, v in items])
-            recent_lines = []
-            for r in recent:
-                summary_text = " ".join(str(r.get("summary", "")).split())
-                if not summary_text:
-                    summary_text = "(no summary)"
-                recent_lines.append(
-                    f"- [{r.get('timestamp_utc','')}] {r.get('category','Unknown')} | {r.get('language','Unknown')} | {r.get('outcome','unknown')} | {summary_text[:120]}"
-                )
-            if not recent_lines:
-                recent_lines.append("- None")
+
+            unanswered_lines = []
+            for r in unanswered:
+                question = " ".join(str(r.get("summary", "")).split()).strip()
+                if not question:
+                    question = "(no question text)"
+                unanswered_lines.append(f"- {question}")
+            if not unanswered_lines:
+                unanswered_lines.append("- None")
+
             reply = (
                 "📊 Helpdesk Query Summary\n\n"
-                f"Total logged queries: {total}\n\n"
+                f"Total logged student questions: {total}\n\n"
                 "Answered vs not covered:\n"
                 f"{_fmt_map(by_outcome)}\n\n"
                 "By category:\n"
                 f"{_fmt_map(by_category)}\n\n"
                 "By language:\n"
                 f"{_fmt_map(by_language)}\n\n"
-                "Recent queries:\n"
-                + "\n".join(recent_lines)
+                "Unanswered questions (latest, up to 5):\n"
+                + "\n".join(unanswered_lines)
             ).rstrip()
             result = _send_message(chat_id, reply)
             if not result["success"]:

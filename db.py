@@ -420,6 +420,7 @@ def get_query_log_summary(limit_recent: int = 5) -> dict:
         "by_category": {},
         "by_language": {},
         "recent": [],
+        "unanswered": [],
     }
     rows = []
     if _use_db:
@@ -455,14 +456,18 @@ def get_query_log_summary(limit_recent: int = 5) -> dict:
         filtered.append(r)
 
     summary["total"] = len(filtered)
+    unanswered = []
     for r in filtered:
-        outcome = r.get("outcome") or "unknown"
+        outcome = (r.get("outcome") or "unknown").strip().lower()
         category = r.get("category") or "Unknown"
         language = r.get("language") or "Unknown"
         summary["by_outcome"][outcome] = summary["by_outcome"].get(outcome, 0) + 1
         summary["by_category"][category] = summary["by_category"].get(category, 0) + 1
         summary["by_language"][language] = summary["by_language"].get(language, 0) + 1
+        if outcome in ("not covered", "not_covered", "unanswered", "failed", "error"):
+            unanswered.append(r)
     summary["recent"] = filtered[: max(0, int(limit_recent))]
+    summary["unanswered"] = unanswered[:5]
     return summary
 
 
