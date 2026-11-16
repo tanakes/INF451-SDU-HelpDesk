@@ -396,17 +396,27 @@ async def webhook(request: Request, x_telegram_bot_api_secret_token: str | None 
         if _mark_seen(_SEEN_MESSAGE_KEYS, f"{chat_id}:{message_id}"):
             return Response(status_code=200)
     sender = " ".join(filter(None, [chat.get("first_name", ""), chat.get("last_name", "")])).strip() or "Unknown"
-    text = message.get("text", "")
-    if not text:
+    raw_text = (message.get("text") or "").strip()
+    if not raw_text:
         return Response(status_code=200)
+
+    # Normalize bot commands: /cmd@BotName -> /cmd (common in group chats)
+    text = raw_text
+    if text.startswith("/"):
+        parts = text.split(None, 1)
+        head = parts[0]
+        if "@" in head:
+            head = head.split("@", 1)[0]
+            text = head + ((" " + parts[1]) if len(parts) > 1 else "")
+    lower = text.lower()
+    command = lower.split()[0] if lower.startswith("/") else ""
 
     session_id = get_current_session_id(chat_id)
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    lower = text.strip().lower()
 
     try:
         # /start command
-        if lower == "/start":
+        if command == "/start":
             result = _send_message(chat_id, WELCOME_MESSAGE)
             if not result["success"]:
                 print(f"SEND_FAILED: {result['error']}")
@@ -415,7 +425,7 @@ async def webhook(request: Request, x_telegram_bot_api_secret_token: str | None 
             return Response(status_code=200)
 
         # /new command - start a fresh conversation session
-        if lower in ("/new", "/newsession", "/reset"):
+        if command in ("/new", "/newsession", "/reset"):
             new_session_id = start_new_session(chat_id)
             reply = "✅ Started a new session. Your previous chat context is cleared. How can I help you?"
             result = _send_message(chat_id, reply)
@@ -425,24 +435,24 @@ async def webhook(request: Request, x_telegram_bot_api_secret_token: str | None 
             log_query(now, "System", "English", "answered", "User started a new session")
             return Response(status_code=200)
 
-        # в”Ђв”Ђ US-02: /menu command в”Ђв”Ђ
-        if lower == "/menu":
+        # /menu command
+        if command == "/menu":
             result = _send_message(chat_id, MENU_MESSAGE)
             if not result["success"]:
                 print(f"SEND_FAILED: {result['error']}")
             _save_session_transcript(session_id, sender, "/menu", MENU_MESSAGE)
             return Response(status_code=200)
 
-        # в”Ђв”Ђ US-01: /help command в”Ђв”Ђ
-        if lower == "/help":
+        # /help command
+        if command == "/help":
             result = _send_message(chat_id, HELP_MESSAGE)
             if not result["success"]:
                 print(f"SEND_FAILED: {result['error']}")
             _save_session_transcript(session_id, sender, "/help", HELP_MESSAGE)
             return Response(status_code=200)
 
-        # в”Ђв”Ђ US-08: /profile command в”Ђв”Ђ
-        if lower == "/profile":
+        # /profile command
+        if command == "/profile":
             prof = get_profile(chat_id)
             if prof:
                 reply = (
@@ -465,7 +475,7 @@ async def webhook(request: Request, x_telegram_bot_api_secret_token: str | None 
             return Response(status_code=200)
 
         # Advisor escalation flow
-        if lower == "/advisor":
+        if command == "/advisor":
             set_user_state(chat_id, {"awaiting_advisor_question": True})
             reply = "Please write your question for the advisor, and I will forward it as a support ticket."
             result = _send_message(chat_id, reply)
@@ -516,8 +526,8 @@ async def webhook(request: Request, x_telegram_bot_api_secret_token: str | None 
             _save_session_transcript(session_id, sender, text, reply)
             return Response(status_code=200)
 
-        # в”Ђв”Ђ US-10: /tickets command (staff only) в”Ђв”Ђ
-        if lower == "/tickets":
+        # /tickets command (staff only)
+        if command == "/tickets":
             if not _is_staff_chat(chat_id):
                 reply = "🔒 Access Restricted: This command is only available inside the authorized staff group."
                 _send_message(chat_id, reply)
@@ -529,7 +539,7 @@ async def webhook(request: Request, x_telegram_bot_api_secret_token: str | None 
                 lines.append("None.")
             else:
                 for t in tickets:
-                    lines.append(f"• {t['ticket_id']}: {t.get('sender','Unknown')} — {t.get('context','')[:80]}")
+                    lines.append(f"• {t.get('ticket_id','N/A')}: {t.get('sender','Unknown')} — {str(t.get('context',''))[:120]}")
             reply = "\n".join(lines)
             result = _send_message(chat_id, reply)
             if not result["success"]:
@@ -537,14 +547,19 @@ async def webhook(request: Request, x_telegram_bot_api_secret_token: str | None 
             _save_session_transcript(session_id, sender, "/tickets", reply)
             return Response(status_code=200)
 
-        # в”Ђв”Ђ US-06: /summary command (staff only) в”Ђв”Ђ
-        if lower == "/summary":
+        # /summary command (staff only)
+        if command == "/summary":
             if not _is_staff_chat(chat_id):
                 reply = "🔒 Access Restricted: This command is only available inside the authorized staff group."
                 _send_message(chat_id, reply)
                 _save_session_transcript(session_id, sender, "/summary", reply)
                 return Response(status_code=200)
-            reply = await answer("Show me the executive summary of student questions (answered vs not covered, by category and language).", NVIDIA_API_KEY)
+            profile = None
+            reply = await answer(
+                "Show a concise executive summary of student helpdesk queries from recent logs: totals, answered vs not covered, breakdown by category and language, and top unanswered topics. Use available stored data context if known; otherwise state what data is unavailable.",
+                NVIDIA_API_KEY,
+                profile=profile,
+            )
             result = _send_message(chat_id, reply)
             if not result["success"]:
                 print(f"SEND_FAILED: {result['error']}")
