@@ -318,6 +318,22 @@ def resolve_ticket(ticket_id: str, resolution_message: str) -> bool:
     return updated
 
 
+def get_user_state(user_id: str) -> dict:
+    if _use_db:
+        try:
+            row = _db_exec("SELECT state_json FROM user_state WHERE user_id=%s", (str(user_id),), fetch="one")
+            if not row or not row[0]:
+                return {}
+            return json.loads(row[0])
+        except Exception:
+            pass
+    rows = _load("user_state.json")
+    for r in rows:
+        if str(r.get("user_id")) == str(user_id):
+            return r.get("state") or {}
+    return {}
+
+
 def set_user_state(user_id: str, state: dict):
     if _use_db:
         try:
