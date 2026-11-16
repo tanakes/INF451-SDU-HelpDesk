@@ -27,7 +27,7 @@ HARD RULES (never break):
 1. NEVER use asterisks (* or **) anywhere in your reply. Telegram shows them literally.
 2. Put a blank line between EVERY paragraph, heading, bullet, and image marker. No clumped text.
 3. NEVER use Markdown headings (#, ##, ###). Telegram renders # as raw text. Use emojis instead.
-4. Ground every factual answer strictly in the provided knowledge base context. If you cite a source, put it at the very end of your reply (last line/paragraph), not at the beginning.
+4. Ground every factual answer strictly in the provided knowledge base context. Cite a source at the very end of your reply (last line/paragraph), not at the beginning. Use only official sources (official URL or official PDF/regulation name) when available. If no official source is available, cite "Student Community Guide". Never cite internal .md files or internal system paths.
 5. If the answer is not in the knowledge base, say so concisely, direct the student to the SSC in Block B, and offer to escalate to a human advisor. Never hallucinate.
 6. Reply in the language of the student's most recent message (Kazakh, Russian, or English).
 7. Keep facts (numbers, dates, contacts, URLs, regulation codes) exactly as written in the knowledge base.
@@ -43,7 +43,8 @@ Do not output internal monologue, planning, or status updates. Output only the f
 def _display_source(doc) -> str:
     src = (getattr(doc, "source_url", None) or "").strip()
     if src:
-        # Prefer the official file/page name rather than internal paths.
+        if src.startswith("http://") or src.startswith("https://"):
+            return src
         name = src.rstrip("/").split("/")[-1].split("?")[0]
         if name:
             name = name.replace("%20", " ")
@@ -51,12 +52,14 @@ def _display_source(doc) -> str:
                 name = name[:-3]
             return name
         return src
-    title = (getattr(doc, "title", "") or "").strip()
-    if title:
-        return title
-    path = getattr(doc, "path", "") or ""
-    base = os.path.splitext(os.path.basename(path))[0]
-    return base.replace("_", " ").strip() or "Official regulation"
+    label = (getattr(doc, "source_label", None) or "").strip()
+    if label:
+        if label.lower().endswith(".md") or "knowledge_base" in label.replace("\\", "/"):
+            label = ""
+        else:
+            return label
+    # No official URL/label -> community/informal guide (never expose internal .md)
+    return "Student Community Guide"
 
 
 def build_context(docs) -> str:
@@ -182,6 +185,23 @@ def _looks_like_thinking(text: str) -> bool:
     return count >= 3
 
 
+def _sanitize_telegram(text: str) -> str:
+    if not text:
+        return text
+    # Strip markdown emphasis/heading markers that render poorly in Telegram
+    text = text.replace("**", "").replace("__", "").replace("`", "")
+    text = re.sub(r"^#{1,6}\s*", "", text, flags=re.M)
+    # Convert markdown bullets to plain bullets
+    text = re.sub(r"^\s*[\*\-]\s+", "• ", text, flags=re.M)
+    # Remove remaining single-asterisk emphasis
+    text = re.sub(r"\*(.+?)\*", r"\1", text)
+    # Remove any stray asterisks
+    text = text.replace("*", "")
+    # Normalize spacing
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()
+
+
 async def answer(student_message: str, api_key: str, model_name: str = NVIDIA_MODEL, profile: dict | None = None) -> str:
     if not api_key:
         return "I'm temporarily unable to answer. No AI API key is configured. Please contact the SSC in Block B."
@@ -244,13 +264,18 @@ async def answer(student_message: str, api_key: str, model_name: str = NVIDIA_MO
                 is_source = True
             if is_source:
                 cleaned = ln.strip()
-                # Replace internal absolute/relative .md paths with official file name
                 m = re.search(r"Source:\s*(.+)$", cleaned, flags=re.IGNORECASE)
                 if m:
                     val = m.group(1).strip()
-                    if "/knowledge_base/" in val or val.lower().endswith(".md"):
-                        base = os.path.splitext(os.path.basename(val.replace("\\", "/")))[0]
-                        val = base.replace("_", " ").strip() or val
+                    norm = val.replace("\\", "/")
+                    if "/knowledge_base/" in norm or norm.lower().endswith(".md") or norm.lower().startswith("knowledge_base/") or re.search(r"\bcampus_map_and_cabinets\.md\b", norm, flags=re.IGNORECASE):
+                        # Not an official source; use community guide label
+                        val = "Student Community Guide"
+                    if norm.lower().endswith(".md"):
+                        base = os.path.splitext(os.path.basename(norm))[0]
+                        candidate = base.replace("_", " ").strip()
+                        if candidate and "knowledge base" not in candidate.lower():
+                            val = candidate if (norm.startswith("http") or "official" in candidate.lower()) else "Student Community Guide"
                     cleaned = f"Source: {val}"
                 source_lines.append(cleaned)
             else:
@@ -269,6 +294,7 @@ async def answer(student_message: str, api_key: str, model_name: str = NVIDIA_MO
                     seen.add(key)
                     uniq_sources.append(sline)
             text = "\n".join(other_lines).strip() + "\n\n" + "\n".join(uniq_sources).strip()
+        text = _sanitize_telegram(text)
         return text.strip()
     except httpx.HTTPStatusError as exc:
         return f"I'm temporarily unable to answer (API error {exc.response.status_code}). Please contact the SSC in Block B or try again later."

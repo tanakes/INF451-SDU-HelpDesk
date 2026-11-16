@@ -29,6 +29,7 @@ class KBDoc:
     keywords: List[str]
     menu_summary: str
     source_url: Optional[str]
+    source_label: Optional[str]
     body: str
     raw: str
 
@@ -123,6 +124,7 @@ def load_docs() -> List[KBDoc]:
                     keywords=[str(k).lower() for k in (fm.get("keywords") or [])],
                     menu_summary=str(fm.get("menu_summary", "")),
                     source_url=fm.get("source_url"),
+                    source_label=fm.get("source_label") or fm.get("source_name"),
                     body=body.strip(),
                     raw=raw,
                 )
