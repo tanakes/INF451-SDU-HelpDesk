@@ -435,15 +435,34 @@ def get_query_log_summary(limit_recent: int = 5) -> dict:
             rows = []
     if not rows:
         rows = list(reversed(_load("query_log.json")))
-    summary["total"] = len(rows)
+
+    # Keep only actual student questions in helpdesk summary (exclude system/operational logs)
+    filtered = []
     for r in rows:
+        category = (r.get("category") or "").strip()
+        text = " ".join(str(r.get("summary") or "").split()).strip()
+        if not text:
+            continue
+        low = text.lower()
+        if category == "System":
+            continue
+        if low.startswith("user started bot") or low.startswith("user started a new session"):
+            continue
+        if low.startswith("staff requested") or low.startswith("staff resolved ticket"):
+            continue
+        r = dict(r)
+        r["summary"] = text
+        filtered.append(r)
+
+    summary["total"] = len(filtered)
+    for r in filtered:
         outcome = r.get("outcome") or "unknown"
         category = r.get("category") or "Unknown"
         language = r.get("language") or "Unknown"
         summary["by_outcome"][outcome] = summary["by_outcome"].get(outcome, 0) + 1
         summary["by_category"][category] = summary["by_category"].get(category, 0) + 1
         summary["by_language"][language] = summary["by_language"].get(language, 0) + 1
-    summary["recent"] = rows[: max(0, int(limit_recent))]
+    summary["recent"] = filtered[: max(0, int(limit_recent))]
     return summary
 
 
