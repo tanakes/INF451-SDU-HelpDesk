@@ -56,6 +56,21 @@ def _simple_yaml(text: str) -> dict:
     result: dict = {}
     current_key = None
     current_list: List[str] = []
+
+    def _parse_inline_list(value: str):
+        v = value.strip()
+        if not (v.startswith("[") and v.endswith("]")):
+            return None
+        inner = v[1:-1].strip()
+        if not inner:
+            return []
+        items = []
+        for part in inner.split(","):
+            p = part.strip().strip('"').strip("'")
+            if p:
+                items.append(p)
+        return items
+
     for line in text.splitlines():
         if not line.strip() or line.strip().startswith("#"):
             continue
@@ -68,10 +83,17 @@ def _simple_yaml(text: str) -> dict:
             value = m.group(2).strip()
             if value == "":
                 current_list = []
+                continue
+            inline = _parse_inline_list(value)
+            if inline is not None:
+                result[current_key] = inline
+                current_key = None
+                current_list = []
             else:
-                result[current_key] = value.strip('"')
+                result[current_key] = value.strip('"').strip("'")
+                current_key = current_key  # keep for possible? no, scalar done
         elif line.lstrip().startswith("- ") and current_key is not None:
-            current_list.append(line.lstrip()[2:].strip().strip('"'))
+            current_list.append(line.lstrip()[2:].strip().strip('"').strip("'"))
     if current_key is not None and current_list:
         result[current_key] = current_list
     return result
