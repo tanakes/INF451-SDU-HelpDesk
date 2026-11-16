@@ -546,9 +546,12 @@ async def webhook(request: Request, x_telegram_bot_api_secret_token: str | None 
             else:
                 for t in tickets:
                     tid = t.get('ticket_id', 'N/A')
-                    lines.append(f"• {tid}: {t.get('sender','Unknown')} — {str(t.get('context',''))[:120]}")
+                    ctx = " ".join(str(t.get('context', '')).split())
+                    if not ctx:
+                        ctx = "(no question)"
+                    lines.append(f"• {tid}: {t.get('sender','Unknown')} — {ctx[:120]}")
                     lines.append(f"  Reply: /resolve {tid} <your answer>")
-            reply = "\n".join(lines)
+            reply = "\n".join(lines).rstrip()
             result = _send_message(chat_id, reply)
             if not result["success"]:
                 print(f"SEND_FAILED: {result['error']}")
@@ -634,7 +637,12 @@ async def webhook(request: Request, x_telegram_bot_api_secret_token: str | None 
                 return "\n".join([f"- {k}: {v}" for k, v in items])
             recent_lines = []
             for r in recent:
-                recent_lines.append(f"- [{r.get('timestamp_utc','')}] {r.get('category','Unknown')} | {r.get('language','Unknown')} | {r.get('outcome','unknown')} | {str(r.get('summary',''))[:120]}")
+                summary_text = " ".join(str(r.get("summary", "")).split())
+                if not summary_text:
+                    summary_text = "(no summary)"
+                recent_lines.append(
+                    f"- [{r.get('timestamp_utc','')}] {r.get('category','Unknown')} | {r.get('language','Unknown')} | {r.get('outcome','unknown')} | {summary_text[:120]}"
+                )
             if not recent_lines:
                 recent_lines.append("- None")
             reply = (
@@ -648,7 +656,7 @@ async def webhook(request: Request, x_telegram_bot_api_secret_token: str | None 
                 f"{_fmt_map(by_language)}\n\n"
                 "Recent queries:\n"
                 + "\n".join(recent_lines)
-            )
+            ).rstrip()
             result = _send_message(chat_id, reply)
             if not result["success"]:
                 print(f"SEND_FAILED: {result['error']}")
