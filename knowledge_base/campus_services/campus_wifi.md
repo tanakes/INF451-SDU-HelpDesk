@@ -1,63 +1,52 @@
 ---
-title: "SDU Campus Wi-Fi & Network Access (SDU_WiFi, SDU_Dorm, Freedom Wi-Fi, Eduroam)"
+title: "SDU Wi-Fi, Internet Access, and Wi-Fi Zone"
 source_url: "https://sdu.edu.kz/en/student-services/"
 keywords:
   - wifi
   - wi-fi
   - internet
-  - freedom wifi
-  - freedom
   - wireless
   - network
   - SDU_WiFi
   - SDU_Dorm
   - SDU_Guest
   - Eduroam
+  - Freedom Wi-Fi
+  - freedom wifi
   - password
   - moodle
+  - connect
+  - connection
+  - wifi zone
+  - wi-fi zone
   - вайфай
   - интернет
   - пароль
   - сеть
-  - фридом
-  - логин
-  - ғаламтор
-  - құпия сөз
+  - вайфай зона
 ---
 
-# SDU Campus Wi-Fi & Network Access
+# SDU Wi-Fi, Internet Access, and Wi-Fi Zone
 
-> ⚠️ **DISAMBIGUATION (CRITICAL):**
-> If a student asks **"Where is Wi-Fi zone?"**, **"Where's wifi zone?"**, or any location/navigation question, this is a **PHYSICAL LOCATION INQUIRY**, NOT an internet connection inquiry.
-> You MUST answer from `campus_map_and_cabinets.md` and dispatch the SDU Campus Map (`[send:sdu-helpdesk-bot/documents/assets/SDU_map.jpg]`).
-> DO NOT provide Wi-Fi SSIDs or password connection steps for "Where is..." questions.
+## Wi-Fi Zone (physical place)
+"Wi-Fi Zone" is the name of a physical place/student area on the SDU campus where students can sit and use campus wireless internet. If a student asks "where is Wi-Fi zone" or asks for its location, treat this as a location/navigation question (not only a password/connection question). The exact coordinates are not specified in the available campus location data; refer the student to the SDU campus map and direct them to the Student Service Center (SSC) in Block B (1st floor) or the Advisor Desk in Block D for on-campus directions.
 
-## Wi-Fi Networks Available on Campus
-SDU provides high-speed wireless network access across the entire campus with data rates of up to 300 Mbps (supporting 2.4 GHz and 5 GHz bands, 802.11g/n/ac):
+## Wireless networks on campus
+SDU provides wireless internet access across campus, including academic buildings and student areas.
 
-1. **SDU_WiFi** — Main enterprise Wi-Fi network in all academic and education buildings.
-2. **SDU_Dorm** — Dedicated high-speed network across the Student House (dormitory buildings).
-3. **Eduroam** — Global academic roaming network for students and visiting researchers.
-4. **SDU_Guest / Freedom Wi-Fi** — Open / guest connectivity for visitors and open campus areas.
+- SDU_WiFi: main network in academic/education buildings.
+- SDU_Dorm: network in student dormitory buildings.
+- Eduroam: academic roaming network.
+- SDU_Guest / Freedom Wi-Fi: guest/open connectivity where available.
 
-## How to Connect to SDU Enterprise Wi-Fi (SDU_WiFi / SDU_Dorm)
-SDU uses **WPA2 Enterprise Authentication**, meaning each student connects using their own personal university credentials:
+## How to connect (SDU_WiFi / SDU_Dorm)
+SDU enterprise Wi-Fi uses personal university credentials (WPA2 Enterprise):
+- Username/login: student ID / Moodle username (or university email prefix).
+- Password: Moodle / Student Portal password.
+- Typical settings if prompted: EAP method PEAP, Phase 2 MSCHAPV2; accept/trust the university certificate if requested.
 
-- **Username / Login:** Your student ID / Moodle username (or university email prefix).
-- **Password:** Your Moodle / Student Portal password.
+## Password reset
+Password changes can be managed via the SDU password portal: https://password.sdu.edu.kz
 
-### Connection Steps:
-1. Select **SDU_WiFi** (in study blocks) or **SDU_Dorm** (in the dormitory).
-2. Set EAP method to **PEAP** and Phase 2 authentication to **MSCHAPV2** (if prompted by Android/Windows).
-3. Enter your **Moodle username** and **password**.
-4. Accept / trust the university security certificate.
-
-## Password Reset & Account Synchronization
-SDU uses unified single sign-on credentials across Wi-Fi, Moodle, and Office 365:
-- **Change / Reset Password Portal:** https://password.sdu.edu.kz
-- Enter your student username and official university mail (`ID@stu.sdu.edu.kz`) to receive a password reset link.
-- Changing your password at `password.sdu.edu.kz` automatically updates your Wi-Fi, Moodle, and Office 365 passwords simultaneously.
-
-## Technical Assistance
-If you cannot connect or your account is locked, contact the SDU IT Department or visit the Student Services portal:
-https://sdu.edu.kz/en/student-services/
+## Technical help
+For connection issues or account problems, contact SDU IT support or visit: https://sdu.edu.kz/en/student-services/ For in-person help on campus, visit the Student Service Center (SSC) in Block B.

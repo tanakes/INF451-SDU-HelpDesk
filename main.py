@@ -700,6 +700,48 @@ async def webhook(request: Request, x_telegram_bot_api_secret_token: str | None 
         profile = get_profile(chat_id)
         kb_docs = find_relevant_docs(text)
         reply = await answer(text, NVIDIA_API_KEY, profile=profile)
+
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+
+        # Handle send markers emitted by model (e.g. [send:documents/assets/SDU_map.jpg])
+        send_markers = re.findall(r"\[send:([^\]\n]+)\]", reply)
+        if send_markers:
+            reply = re.sub(r"\n?\[send:[^\]\n]+\]\n?", "\n", reply).strip()
+        for marker in send_markers:
+            rel = marker.strip()
+            rel = rel.replace("\\", "/")
+            # normalize common prefixes
+            for prefix in ("sdu-helpdesk-bot/", "/opt/render/project/src/", "src/"):
+                if rel.startswith(prefix):
+                    rel = rel[len(prefix):]
+            abs_path = os.path.join(base_dir, rel)
+            try:
+                if os.path.exists(abs_path):
+                    if rel.lower().endswith((".jpg", ".jpeg", ".png", ".gif", ".webp")):
+                        _send_photo(chat_id, abs_path)
+                    else:
+                        _send_document(chat_id, abs_path)
+            except Exception as exc:
+                print(f"SEND_MARKER_FAILED: {exc}")
+
+        # Auto-dispatch campus map for physical location/navigation queries when relevant
+        location_terms = [
+            "where is", "location", "located", "navigate", "navigation", "map", "campus map",
+            "how to get", "how to find", "direction", "room", "cabinet", "block", "hall",
+            "bochka", "bochki", "wifi zone", "wi-fi zone", "canteen", "red canteen",
+            "a1", "a2", "b1", "b2", "c1", "c2", "d1", "d2", "d117", "d218", "d116", "d217", "d113", "d214", "e117", "e221",
+            "где", "как найти", "локац", "аудитор", "бочка", "бочки", "вайфай зона", "қайда",
+        ]
+        is_location_query = any(t in lower for t in location_terms)
+        has_campus_doc = any(
+            ("campus_map_and_cabinets" in (d.path or "").replace("\\", "/")) or ("campus map" in (d.title or "").lower())
+            for d in kb_docs
+        )
+        if is_location_query and has_campus_doc and not send_markers:
+            map_path = os.path.join(base_dir, "documents", "assets", "SDU_map.jpg")
+            if os.path.exists(map_path):
+                _send_photo(chat_id, map_path)
+
         result = _send_message(chat_id, reply)
         if not result["success"]:
             print(f"SEND_FAILED: {result['error']}")

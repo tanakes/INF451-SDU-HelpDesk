@@ -60,6 +60,7 @@ If a student asks where a room, hall, canteen, or place is on campus:
 - Student Service Center (SSC) and Registrar: Block B (1st floor).
 - Advisor Desk: Block D, next to Bochka C1 (D113) / C2 (D214).
 - Red Canteen: Block E, next to Bochka D1 (E117) / D2 (E221).
+- Wi-Fi Zone: a named physical student area/place on campus for using wireless internet. Exact coordinates are not specified in the available campus location data; use the SDU campus map and ask at the SSC in Block B or Advisor Desk in Block D for directions.
 - Library and printing facilities: see campus map.
 - Block I: new academic block (recent addition; may not appear on older map).
 
