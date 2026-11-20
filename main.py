@@ -373,6 +373,96 @@ def _parse_profile_text(text: str) -> dict:
     return {"degree": degree, "year": year, "major": major}
 
 
+_CAMPUS_HALLS = {
+    "A1": {"code": "A1", "cabinet": "D117", "name": "Bochka A1", "desc": "1st floor, 1st lecture hall from the main entrance."},
+    "A2": {"code": "A2", "cabinet": "D218", "name": "Bochka A2", "desc": "2nd floor, 1st lecture hall from the main entrance."},
+    "B1": {"code": "B1", "cabinet": "D116", "name": "Bochka B1", "desc": "1st floor, 2nd lecture hall from the main entrance."},
+    "B2": {"code": "B2", "cabinet": "D217", "name": "Bochka B2", "desc": "2nd floor, 2nd lecture hall from the main entrance."},
+    "C1": {"code": "C1", "cabinet": "D113", "name": "Bochka C1", "desc": "1st floor, 3rd lecture hall from the main entrance, next to the Advisor Desk."},
+    "C2": {"code": "C2", "cabinet": "D214", "name": "Bochka C2", "desc": "2nd floor, 3rd lecture hall from the main entrance, next to the Advisor Desk."},
+    "D1": {"code": "D1", "cabinet": "E117", "name": "Bochka D1", "desc": "1st floor, 4th lecture hall from the main entrance, next to the Red Canteen (Block E area)."},
+    "D2": {"code": "D2", "cabinet": "E221", "name": "Bochka D2", "desc": "2nd floor, 4th lecture hall from the main entrance, next to the Red Canteen (Block E area)."},
+}
+_CABINET_TO_HALL = {v["cabinet"]: k for k, v in _CAMPUS_HALLS.items()}
+
+
+def _build_location_answer_if_known(text: str, kb_docs: list) -> str | None:
+    """Return a deterministic, grounded campus-location answer for known places/codes."""
+    has_campus_doc = any(
+        ("campus_map_and_cabinets" in (d.path or "").replace("\\", "/")) or ("campus map" in (d.title or "").lower())
+        for d in (kb_docs or [])
+    )
+    if not has_campus_doc:
+        return None
+
+    t = text.lower()
+    # Normalize common Cyrillic terms
+    is_bochka = bool(re.search(r"\bbochki\b|\bbochka\b|бочк", t))
+    is_wifi_zone = bool(re.search(r"\bwifi\s*zone\b|\bwi-?fi\s*zone\b|вайфай\s*зон", t))
+
+    found_codes = []
+    # hall codes and cabinet codes
+    for m in re.finditer(r"\b(A1|A2|B1|B2|C1|C2|D1|D2|D113|D116|D117|D214|D217|D218|E117|E221)\b", text, flags=re.IGNORECASE):
+        token = m.group(1).upper()
+        code = _CABINET_TO_HALL.get(token, token)
+        if code in _CAMPUS_HALLS and code not in found_codes:
+            found_codes.append(code)
+
+    # Specific hall/cabinet asked
+    if found_codes:
+        lines = ["📍 Campus location"]
+        for code in found_codes:
+            h = _CAMPUS_HALLS[code]
+            lines.append("")
+            lines.append(f"{h['code']} ({h['name']}) = cabinet {h['cabinet']}, {h['desc']}")
+        if len(found_codes) == 1:
+            h = _CAMPUS_HALLS[found_codes[0]]
+            lines.append("")
+            lines.append("Nearby landmarks: Advisor Desk is in Block D next to C1/C2 (D113/D214). Red Canteen is in Block E next to D1/D2 (E117/E221).")
+        lines.append("")
+        lines.append("Source: Student Community Guide")
+        return "\n".join(lines).strip()
+
+    # General bochki question
+    if is_bochka:
+        lines = [
+            "📍 SDU lecture halls (bochki)",
+            "",
+            "“Bochki” are SDU’s large amphitheater lecture halls. Each has a letter code and a cabinet number:",
+            "",
+            "• A1 = D117 (Bochka A1): 1st floor, 1st lecture hall from the main entrance.",
+            "• A2 = D218 (Bochka A2): 2nd floor, 1st lecture hall from the main entrance.",
+            "• B1 = D116 (Bochka B1): 1st floor, 2nd lecture hall from the main entrance.",
+            "• B2 = D217 (Bochka B2): 2nd floor, 2nd lecture hall from the main entrance.",
+            "• C1 = D113 (Bochka C1): 1st floor, 3rd lecture hall from the main entrance, next to the Advisor Desk.",
+            "• C2 = D214 (Bochka C2): 2nd floor, 3rd lecture hall from the main entrance, next to the Advisor Desk.",
+            "• D1 = E117 (Bochka D1): 1st floor, 4th lecture hall from the main entrance, next to the Red Canteen (Block E area).",
+            "• D2 = E221 (Bochka D2): 2nd floor, 4th lecture hall from the main entrance, next to the Red Canteen (Block E area).",
+            "",
+            "If you tell me the exact hall code (for example A2 or D1), I can point to its specific location.",
+            "",
+            "Source: Student Community Guide",
+        ]
+        return "\n".join(lines).strip()
+
+    # Wi-Fi Zone as a physical place
+    if is_wifi_zone:
+        lines = [
+            "📍 Wi-Fi Zone (physical place)",
+            "",
+            "Wi-Fi Zone is the name of a physical student area on the SDU campus where students can sit and use campus wireless internet.",
+            "",
+            "The exact coordinates of Wi-Fi Zone are not specified in the available campus location information. Please refer to the SDU campus map for navigation.",
+            "",
+            "For in-person directions, visit the Student Service Center (SSC) in Block B (1st floor) or the Advisor Desk in Block D.",
+            "",
+            "Source: Student Community Guide",
+        ]
+        return "\n".join(lines).strip()
+
+    return None
+
+
 # ---------------------------------------------------------------------------
 # Webhook
 # ---------------------------------------------------------------------------
@@ -774,7 +864,11 @@ async def webhook(request: Request, x_telegram_bot_api_secret_token: str | None 
         # Normal Q&A path — grounded LLM answer with profile context
         profile = get_profile(chat_id)
         kb_docs = find_relevant_docs(text)
-        reply = await answer(text, NVIDIA_API_KEY, profile=profile)
+        location_reply = _build_location_answer_if_known(text, kb_docs)
+        if location_reply:
+            reply = location_reply
+        else:
+            reply = await answer(text, NVIDIA_API_KEY, profile=profile)
 
         base_dir = os.path.dirname(os.path.abspath(__file__))
 
