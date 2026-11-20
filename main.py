@@ -226,7 +226,7 @@ def _send_message(chat_id: str | int, text: str) -> dict:
 
 def _file_url(file_path: str) -> str:
     rel = os.path.relpath(file_path, BASE_DIR).replace(os.sep, "/")
-    return f"{PUBLIC_BASE_URL}/static/{rel}"
+    return f"https://raw.githubusercontent.com/tanakes/INF451-SDU-HelpDesk/main/{rel}"
 
 
 def _send_document(chat_id: str | int, file_path: str) -> dict:
