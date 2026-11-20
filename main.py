@@ -22,6 +22,7 @@ from datetime import datetime, timezone
 from threading import Lock
 
 from fastapi import FastAPI, Header, HTTPException, Request, Response
+from fastapi.responses import FileResponse
 import httpx
 
 from llm import answer
@@ -53,6 +54,7 @@ STAFF_GROUP_CHAT_ID = os.environ.get("STAFF_GROUP_CHAT_ID", "")
 NVIDIA_API_KEY = os.environ.get("NVIDIA_API_KEY", "")
 PORT = int(os.environ.get("PORT", "8000"))
 PUBLIC_BASE_URL = os.environ.get("RENDER_EXTERNAL_URL", "").rstrip("/") or "https://sdu-helpdesk-bot.onrender.com"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 TELEGRAM_API = "https://api.telegram.org/bot{token}/{method}"
 
@@ -189,6 +191,15 @@ async def test_send():
         return {"error": str(exc)}
 
 
+@app.get("/static/{path:path}")
+async def static_file(path: str):
+    """Serve static files (e.g. campus map) so Telegram can fetch them via URL."""
+    file_path = os.path.join(BASE_DIR, path)
+    if not os.path.exists(file_path) or not os.path.isfile(file_path):
+        raise HTTPException(status_code=404, detail="File not found")
+    return FileResponse(file_path)
+
+
 # ---------------------------------------------------------------------------
 # Message sending helpers
 # ---------------------------------------------------------------------------
@@ -213,21 +224,23 @@ def _send_message(chat_id: str | int, text: str) -> dict:
         return {"success": False, "error": str(exc)}
 
 
+def _file_url(file_path: str) -> str:
+    rel = os.path.relpath(file_path, BASE_DIR).replace(os.sep, "/")
+    return f"{PUBLIC_BASE_URL}/static/{rel}"
+
+
 def _send_document(chat_id: str | int, file_path: str) -> dict:
     if not BOT_TOKEN:
         return {"success": False, "error": "BOT_TOKEN not configured"}
     if not os.path.exists(file_path):
         return {"success": False, "error": f"File not found: {file_path}"}
     try:
-        with open(file_path, "rb") as _f:
-            files = {"document": (_f.name, _f, "application/octet-stream")}
-            data = {"chat_id": chat_id}
-            resp = httpx.post(
-                TELEGRAM_API.format(token=BOT_TOKEN, method="sendDocument"),
-                data=data,
-                files=files,
-                timeout=60,
-            )
+        url = _file_url(file_path)
+        resp = httpx.post(
+            TELEGRAM_API.format(token=BOT_TOKEN, method="sendDocument"),
+            json={"chat_id": chat_id, "document": url},
+            timeout=60,
+        )
         resp.raise_for_status()
         result = resp.json()
         if result.get("ok"):
@@ -245,15 +258,12 @@ def _send_photo(chat_id: str | int, file_path: str) -> dict:
     if not os.path.exists(file_path):
         return {"success": False, "error": f"File not found: {file_path}"}
     try:
-        with open(file_path, "rb") as _f:
-            files = {"photo": (_f.name, _f, "image/jpeg")}
-            data = {"chat_id": chat_id}
-            resp = httpx.post(
-                TELEGRAM_API.format(token=BOT_TOKEN, method="sendPhoto"),
-                data=data,
-                files=files,
-                timeout=60,
-            )
+        url = _file_url(file_path)
+        resp = httpx.post(
+            TELEGRAM_API.format(token=BOT_TOKEN, method="sendPhoto"),
+            json={"chat_id": chat_id, "photo": url},
+            timeout=60,
+        )
         resp.raise_for_status()
         result = resp.json()
         if result.get("ok"):
@@ -884,14 +894,13 @@ async def webhook(request: Request, x_telegram_bot_api_secret_token: str | None 
                 if rel.startswith(prefix):
                     rel = rel[len(prefix):]
             abs_path = os.path.join(base_dir, rel)
-            try:
-                if os.path.exists(abs_path):
-                    if rel.lower().endswith((".jpg", ".jpeg", ".png", ".gif", ".webp")):
-                        _send_photo(chat_id, abs_path)
-                    else:
-                        _send_document(chat_id, abs_path)
-            except Exception as exc:
-                print(f"SEND_MARKER_FAILED: {exc}")
+            if os.path.exists(abs_path):
+                if rel.lower().endswith((".jpg", ".jpeg", ".png", ".gif", ".webp")):
+                    result = _send_photo(chat_id, abs_path)
+                else:
+                    result = _send_document(chat_id, abs_path)
+                if not result["success"]:
+                    print(f"SEND_MARKER_FAILED: {result['error']}")
 
         # Auto-dispatch campus map for physical location/navigation queries when relevant
         location_terms = [
@@ -909,7 +918,9 @@ async def webhook(request: Request, x_telegram_bot_api_secret_token: str | None 
         if is_location_query and has_campus_doc and not send_markers:
             map_path = os.path.join(base_dir, "documents", "assets", "SDU_map.jpg")
             if os.path.exists(map_path):
-                _send_photo(chat_id, map_path)
+                result = _send_photo(chat_id, map_path)
+                if not result["success"]:
+                    print(f"MAP_DISPATCH_FAILED: {result['error']}")
 
         result = _send_message(chat_id, reply)
         if not result["success"]:
